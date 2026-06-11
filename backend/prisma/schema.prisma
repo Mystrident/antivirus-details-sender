@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Endpoint {
+  id        String         @id @default(cuid())
+  hostname  String         @unique
+  osName    String
+  lastSeen  DateTime
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  antivirus AntivirusInfo?
+}
+
+model AntivirusInfo {
+  id String @id @default(cuid())
+
+  endpointId String @unique
+
+  productName String
+  version     String?
+
+  enabled Boolean
+
+  signatureVersion String?
+  lastUpdateTime   DateTime?
+
+  filesScanned    Int?
+  threatsDetected Int?
+  threatsResolved Int?
+
+  quarantineCount Int @default(0)
+
+  lastThreatDetection DateTime?
+  lastProtectionEvent DateTime?
+
+  lastScan   DateTime?
+  expiryDate DateTime?
+
+  needsUpdate Boolean?
+
+  updatedAt DateTime @updatedAt
+
+  endpoint Endpoint @relation(fields: [endpointId], references: [id])
+}
