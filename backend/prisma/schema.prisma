@@ -26,25 +26,13 @@ model AntivirusInfo {
   version     String?
 
   enabled Boolean
-
-  signatureVersion String?
-  lastUpdateTime   DateTime?
-
-  filesScanned    Int?
-  threatsDetected Int?
-  threatsResolved Int?
-
+  
   quarantineCount Int @default(0)
 
-  lastThreatDetection DateTime?
-  lastProtectionEvent DateTime?
-
-  lastScan   DateTime?
+  lastScan String?
   expiryDate DateTime?
 
   needsUpdate Boolean?
-
-  updatedAt DateTime @updatedAt
 
   endpoint Endpoint @relation(fields: [endpointId], references: [id])
 }

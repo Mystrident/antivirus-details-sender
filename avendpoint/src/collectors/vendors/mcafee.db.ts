@@ -4,27 +4,88 @@ import path from "path";
 import sqlite3 from "sqlite3";
 
 export interface McAfeeMetrics {
-  filesScanned: number | null;
-  threatsDetected: number | null;
-  threatsResolved: number | null;
   quarantineCount: number;
-  lastProtectionEvent: string | null;
+  lastScan: string | null;
+  expiryDate: string | null;
+}
+
+function getSortedEtlFiles(): string[] {
+  const logDir = "C:\\ProgramData\\McAfee\\wps\\log";
+
+  try {
+    return fs
+      .readdirSync(logDir)
+      .filter((f) => f.startsWith("wps-") && f.endsWith(".etl"))
+      .map((f) => ({
+        path: path.join(logDir, f),
+        time: fs.statSync(path.join(logDir, f)).mtimeMs,
+      }))
+      .sort((a, b) => b.time - a.time)
+      .map((f) => f.path);
+  } catch {
+    return [];
+  }
+}
+
+function getMcAfeeLastScan(): string | null {
+  const files = getSortedEtlFiles();
+
+  for (const file of files) {
+    try {
+      const content = fs.readFileSync(file, "utf8");
+
+      const match = content.match(/lastScanInformation:\s*(\d+)/);
+
+      if (match) {
+        return `${match[1]} days ago`;
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+function getMcAfeeExpiryDate(): string | null {
+  const files = getSortedEtlFiles();
+
+  for (const file of files) {
+    try {
+      const content = fs.readFileSync(file, "utf8");
+
+      const match = content.match(/"expiryTime":(\d+)/);
+
+      if (match) {
+        return new Date(Number(match[1])).toISOString();
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
+function getMcAfeeUiMetrics(): {
+  lastScan: string | null;
+  expiryDate: string | null;
+} {
+  return {
+    lastScan: getMcAfeeLastScan(),
+    expiryDate: getMcAfeeExpiryDate(),
+  };
 }
 
 export async function getMcAfeeMetrics(): Promise<McAfeeMetrics> {
   const sourceDb = "C:\\ProgramData\\McAfee\\wps\\DA.db";
-
   const tempDb = path.join(os.tmpdir(), "mcafee-da.db");
 
   try {
     fs.copyFileSync(sourceDb, tempDb);
   } catch {
+    const uiMetrics = getMcAfeeUiMetrics();
+
     return {
-      filesScanned: null,
-      threatsDetected: null,
-      threatsResolved: null,
       quarantineCount: 0,
-      lastProtectionEvent: null,
+      lastScan: uiMetrics.lastScan,
+      expiryDate: uiMetrics.expiryDate,
     };
   }
 
@@ -47,31 +108,29 @@ export async function getMcAfeeMetrics(): Promise<McAfeeMetrics> {
     db.all(query, [], (err, rows: any[]) => {
       db.close();
 
+      try {
+        fs.unlinkSync(tempDb);
+      } catch {}
+
+      const uiMetrics = getMcAfeeUiMetrics();
+
       if (err || !rows?.length) {
         resolve({
-          filesScanned: null,
-          threatsDetected: null,
-          threatsResolved: null,
           quarantineCount: 0,
-          lastProtectionEvent: null,
+          lastScan: uiMetrics.lastScan,
+          expiryDate: uiMetrics.expiryDate,
         });
         return;
       }
 
+      console.log(rows.slice(0, 20));
+
       resolve({
-        filesScanned:
-          rows.find((r) => r.VALUE_NAME === "files_scanned")?.VALUE ?? null,
-
-        threatsDetected:
-          rows.find((r) => r.VALUE_NAME === "threats_detected")?.VALUE ?? null,
-
-        threatsResolved:
-          rows.find((r) => r.VALUE_NAME === "threats_resolved")?.VALUE ?? null,
-
-        quarantineCount:
+        quarantineCount: Number(
           rows.find((r) => r.VALUE_NAME === "items_quarantined")?.VALUE ?? 0,
-
-        lastProtectionEvent: rows[0].TIMESTAMP ?? null,
+        ),
+        lastScan: uiMetrics.lastScan,
+        expiryDate: uiMetrics.expiryDate,
       });
     });
   });

@@ -1,6 +1,6 @@
 import type { AntivirusInfo } from "../types/antivirus.js";
 
-import { runPowerShell } from "../utils/powershell.js";
+import { enumerateValues, HKEY } from "registry-js";
 
 import { collectMcAfee } from "./vendors/mcafee.collector.js";
 import { collectNorton } from "./vendors/norton.collector.js";
@@ -11,33 +11,51 @@ interface AntivirusProduct {
   productState: number;
 }
 
+function isMcAfeeInstalled(): boolean {
+  try {
+    return (
+      enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\McAfee\\wps").length >
+      0
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isNortonInstalled(): boolean {
+  try {
+    return (
+      enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\Norton").length > 0
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
   try {
-    const command =
-      "Get-CimInstance -Namespace root/SecurityCenter2 -Class AntivirusProduct | Select-Object displayName,productState | ConvertTo-Json";
+    if (isMcAfeeInstalled()) {
+      const antivirus: AntivirusProduct = {
+        displayName: "McAfee",
+        productState: 1,
+      };
 
-    const output = await runPowerShell(command);
-
-    const data = JSON.parse(output);
-
-    const antivirus: AntivirusProduct = Array.isArray(data)
-      ? (data.find(
-          (av: AntivirusProduct) =>
-            !av.displayName.toLowerCase().includes("defender"),
-        ) ?? data[0])
-      : data;
-
-    const name = antivirus.displayName.toLowerCase();
-
-    if (name.includes("mcafee")) {
       return collectMcAfee(antivirus);
     }
 
-    if (name.includes("norton")) {
+    if (isNortonInstalled()) {
+      const antivirus: AntivirusProduct = {
+        displayName: "Norton",
+        productState: 1,
+      };
+
       return collectNorton(antivirus);
     }
 
-    return collectGenericAntivirus(antivirus);
+    return collectGenericAntivirus({
+      displayName: "Unknown",
+      productState: 0,
+    });
   } catch (error) {
     console.error("Failed to collect antivirus info:", error);
 
@@ -45,23 +63,10 @@ export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
       productName: "Unknown",
       version: null,
       enabled: false,
-
-      signatureVersion: null,
-      lastUpdateTime: null,
-
       quarantineCount: 0,
-
-      lastThreatDetection: null,
-
       lastScan: null,
       expiryDate: null,
-
       needsUpdate: null,
-
-      filesScanned: null,
-      lastProtectionEvent: null,
-      threatsDetected: null,
-      threatsResolved: null,
     };
   }
 }

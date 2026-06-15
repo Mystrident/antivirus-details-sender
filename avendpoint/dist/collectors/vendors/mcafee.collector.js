@@ -1,9 +1,10 @@
-import { runPowerShell } from "../../utils/powershell.js";
+import { enumerateValues, HKEY } from "registry-js";
 import { getMcAfeeMetrics } from "./mcafee.db.js";
 async function getMcAfeeVersion() {
     try {
-        const output = await runPowerShell('(Get-ItemProperty "HKLM:\\SOFTWARE\\McAfee\\wps").version');
-        return output.trim() || null;
+        const values = enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\McAfee\\wps");
+        const version = values.find((v) => v.name.toLowerCase() === "version");
+        return version?.data?.toString() ?? null;
     }
     catch {
         return null;
@@ -17,16 +18,9 @@ export async function collectMcAfee(product) {
         productName: product.displayName,
         version,
         enabled: product.productState !== 0,
-        signatureVersion: null,
-        lastUpdateTime: null,
         quarantineCount: metrics.quarantineCount,
-        lastThreatDetection: metrics.lastProtectionEvent,
-        filesScanned: metrics.filesScanned,
-        threatsDetected: metrics.threatsDetected,
-        threatsResolved: metrics.threatsResolved,
-        lastProtectionEvent: metrics.lastProtectionEvent,
-        lastScan: metrics.lastProtectionEvent,
-        expiryDate: null,
+        lastScan: metrics.lastScan,
+        expiryDate: metrics.expiryDate,
         needsUpdate: null,
     };
 }

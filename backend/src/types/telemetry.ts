@@ -9,21 +9,7 @@ export interface TelemetryPayload {
 
     enabled: boolean;
 
-    signatureVersion: string | null;
-
-    lastUpdateTime: string | null;
-
-    filesScanned: number | null;
-
-    threatsDetected: number | null;
-
-    threatsResolved: number | null;
-
     quarantineCount: number;
-
-    lastThreatDetection: string | null;
-
-    lastProtectionEvent: string | null;
 
     lastScan: string | null;
 

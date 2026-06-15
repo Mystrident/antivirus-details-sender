@@ -1,3 +1,3 @@
 export const config = {
-    serverUrl: "http://localhost:3000",
+    serverUrl: "https://antivirus-details-sender.onrender.com",
 };

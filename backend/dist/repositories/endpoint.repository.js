@@ -23,23 +23,8 @@ export async function upsertEndpoint(payload) {
                         productName: payload.antivirus.productName,
                         version: payload.antivirus.version,
                         enabled: payload.antivirus.enabled,
-                        signatureVersion: payload.antivirus.signatureVersion,
-                        lastUpdateTime: payload.antivirus.lastUpdateTime
-                            ? new Date(payload.antivirus.lastUpdateTime)
-                            : null,
-                        filesScanned: payload.antivirus.filesScanned,
-                        threatsDetected: payload.antivirus.threatsDetected,
-                        threatsResolved: payload.antivirus.threatsResolved,
                         quarantineCount: payload.antivirus.quarantineCount,
-                        lastThreatDetection: payload.antivirus.lastThreatDetection
-                            ? new Date(payload.antivirus.lastThreatDetection)
-                            : null,
-                        lastProtectionEvent: payload.antivirus.lastProtectionEvent
-                            ? new Date(payload.antivirus.lastProtectionEvent)
-                            : null,
-                        lastScan: payload.antivirus.lastScan
-                            ? new Date(payload.antivirus.lastScan)
-                            : null,
+                        lastScan: payload.antivirus.lastScan,
                         expiryDate: payload.antivirus.expiryDate
                             ? new Date(payload.antivirus.expiryDate)
                             : null,
@@ -49,23 +34,8 @@ export async function upsertEndpoint(payload) {
                         productName: payload.antivirus.productName,
                         version: payload.antivirus.version,
                         enabled: payload.antivirus.enabled,
-                        signatureVersion: payload.antivirus.signatureVersion,
-                        lastUpdateTime: payload.antivirus.lastUpdateTime
-                            ? new Date(payload.antivirus.lastUpdateTime)
-                            : null,
-                        filesScanned: payload.antivirus.filesScanned,
-                        threatsDetected: payload.antivirus.threatsDetected,
-                        threatsResolved: payload.antivirus.threatsResolved,
                         quarantineCount: payload.antivirus.quarantineCount,
-                        lastThreatDetection: payload.antivirus.lastThreatDetection
-                            ? new Date(payload.antivirus.lastThreatDetection)
-                            : null,
-                        lastProtectionEvent: payload.antivirus.lastProtectionEvent
-                            ? new Date(payload.antivirus.lastProtectionEvent)
-                            : null,
-                        lastScan: payload.antivirus.lastScan
-                            ? new Date(payload.antivirus.lastScan)
-                            : null,
+                        lastScan: payload.antivirus.lastScan,
                         expiryDate: payload.antivirus.expiryDate
                             ? new Date(payload.antivirus.expiryDate)
                             : null,
@@ -83,23 +53,8 @@ export async function upsertEndpoint(payload) {
                     productName: payload.antivirus.productName,
                     version: payload.antivirus.version,
                     enabled: payload.antivirus.enabled,
-                    signatureVersion: payload.antivirus.signatureVersion,
-                    lastUpdateTime: payload.antivirus.lastUpdateTime
-                        ? new Date(payload.antivirus.lastUpdateTime)
-                        : null,
-                    filesScanned: payload.antivirus.filesScanned,
-                    threatsDetected: payload.antivirus.threatsDetected,
-                    threatsResolved: payload.antivirus.threatsResolved,
                     quarantineCount: payload.antivirus.quarantineCount,
-                    lastThreatDetection: payload.antivirus.lastThreatDetection
-                        ? new Date(payload.antivirus.lastThreatDetection)
-                        : null,
-                    lastProtectionEvent: payload.antivirus.lastProtectionEvent
-                        ? new Date(payload.antivirus.lastProtectionEvent)
-                        : null,
-                    lastScan: payload.antivirus.lastScan
-                        ? new Date(payload.antivirus.lastScan)
-                        : null,
+                    lastScan: payload.antivirus.lastScan,
                     expiryDate: payload.antivirus.expiryDate
                         ? new Date(payload.antivirus.expiryDate)
                         : null,
