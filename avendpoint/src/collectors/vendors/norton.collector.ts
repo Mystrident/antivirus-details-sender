@@ -1,15 +1,23 @@
 import type { AntivirusInfo } from "../../types/antivirus.js";
+import { getNortonMetrics } from "./norton.db.js";
 
 export async function collectNorton(product: any): Promise<AntivirusInfo> {
+  const metrics = await getNortonMetrics();
+
+  console.log("NORTON METRICS:", metrics);
+
   return {
-    productName: product.displayName,
-    version: null,
+    productName: metrics.productName ?? product.displayName,
 
-    enabled: product.productState !== 0,
+    version: metrics.version,
 
-    quarantineCount: 0,
-    lastScan: null,
-    expiryDate: null,
+    enabled: metrics.enabled,
+
+    quarantineCount: metrics.quarantineCount,
+
+    lastScan: metrics.lastScan,
+
+    expiryDate: metrics.expiryDate,
 
     needsUpdate: null,
   };
