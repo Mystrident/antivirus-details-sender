@@ -12,34 +12,33 @@ export async function getAllEndpoints() {
 export async function upsertEndpoint(payload) {
     return prisma.endpoint.upsert({
         where: {
-            hostname: payload.hostname,
+            macAddress: payload.macAddress,
         },
         update: {
+            hostname: payload.hostname,
             osName: payload.osName,
-            lastSeen: new Date(payload.collectedAt),
+            username: payload.username,
+            assetId: payload.assetId,
+            location: payload.location,
             antivirus: {
                 upsert: {
                     update: {
                         productName: payload.antivirus.productName,
                         version: payload.antivirus.version,
                         enabled: payload.antivirus.enabled,
-                        quarantineCount: payload.antivirus.quarantineCount,
                         lastScan: payload.antivirus.lastScan,
                         expiryDate: payload.antivirus.expiryDate
                             ? new Date(payload.antivirus.expiryDate)
                             : null,
-                        needsUpdate: payload.antivirus.needsUpdate,
                     },
                     create: {
                         productName: payload.antivirus.productName,
                         version: payload.antivirus.version,
                         enabled: payload.antivirus.enabled,
-                        quarantineCount: payload.antivirus.quarantineCount,
                         lastScan: payload.antivirus.lastScan,
                         expiryDate: payload.antivirus.expiryDate
                             ? new Date(payload.antivirus.expiryDate)
                             : null,
-                        needsUpdate: payload.antivirus.needsUpdate,
                     },
                 },
             },
@@ -47,18 +46,20 @@ export async function upsertEndpoint(payload) {
         create: {
             hostname: payload.hostname,
             osName: payload.osName,
+            macAddress: payload.macAddress,
+            username: payload.username,
+            assetId: payload.assetId,
+            location: payload.location,
             lastSeen: new Date(payload.collectedAt),
             antivirus: {
                 create: {
                     productName: payload.antivirus.productName,
                     version: payload.antivirus.version,
                     enabled: payload.antivirus.enabled,
-                    quarantineCount: payload.antivirus.quarantineCount,
                     lastScan: payload.antivirus.lastScan,
                     expiryDate: payload.antivirus.expiryDate
                         ? new Date(payload.antivirus.expiryDate)
                         : null,
-                    needsUpdate: payload.antivirus.needsUpdate,
                 },
             },
         },
