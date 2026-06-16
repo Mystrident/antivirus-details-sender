@@ -6,7 +6,7 @@ function getMcAfeeVersion(): Promise<string | null> {
   return new Promise((resolve) => {
     const regKey = new Registry({
       hive: Registry.HKLM,
-      key: "\\SOFTWARE\\McAfee\\wps"
+      key: "\\SOFTWARE\\McAfee\\wps",
     });
 
     regKey.get("Version", (err, item) => {
@@ -29,9 +29,8 @@ export async function collectMcAfee(product: any): Promise<AntivirusInfo> {
     productName: product.displayName,
     version,
     enabled: product.productState !== 0,
-    quarantineCount: metrics.quarantineCount,
+
     lastScan: metrics.lastScan,
     expiryDate: metrics.expiryDate,
-    needsUpdate: null,
   };
 }

@@ -12,12 +12,8 @@ export async function collectGenericAntivirus(
 
     enabled: product.productState !== 0,
 
-    quarantineCount: 0,
-
     lastScan: null,
 
     expiryDate: null,
-
-    needsUpdate: null,
   };
 }

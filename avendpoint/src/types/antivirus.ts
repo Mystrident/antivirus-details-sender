@@ -8,8 +8,4 @@ export interface AntivirusInfo {
   lastScan: string | null;
 
   expiryDate: string | null;
-
-  needsUpdate: boolean | null;
-
-  quarantineCount: number;
 }

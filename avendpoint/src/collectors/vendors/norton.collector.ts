@@ -15,12 +15,8 @@ export async function collectNorton(product: any): Promise<AntivirusInfo> {
 
     enabled: metrics.enabled,
 
-    quarantineCount: metrics.quarantineCount,
-
     lastScan: metrics.lastScan,
 
     expiryDate: metrics.expiryDate,
-
-    needsUpdate: null,
   };
 }

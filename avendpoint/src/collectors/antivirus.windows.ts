@@ -59,10 +59,9 @@ export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
       productName: "Unknown",
       version: null,
       enabled: false,
-      quarantineCount: 0,
       lastScan: null,
       expiryDate: null,
-      needsUpdate: null,
+      
     };
   }
 }
