@@ -10,24 +10,26 @@ export interface EndpointMetadata {
   username: string | null;
 }
 
-function getMacAddress(): string | null {
+export function getMacAddress(): string | null {
   const interfaces = os.networkInterfaces();
+
+  const candidates: string[] = [];
 
   for (const iface of Object.values(interfaces)) {
     if (!iface) continue;
 
-    for (const adapter of iface) {
-      if (
-        !adapter.internal &&
-        adapter.mac &&
-        adapter.mac !== "00:00:00:00:00:00"
-      ) {
-        return adapter.mac.toUpperCase();
+    for (const item of iface) {
+      if (item.internal || !item.mac || item.mac === "00:00:00:00:00:00") {
+        continue;
       }
+
+      candidates.push(item.mac.toUpperCase());
     }
   }
 
-  return null;
+  candidates.sort();
+
+  return candidates[0] ?? null;
 }
 
 export async function getEndpointMetadata(): Promise<EndpointMetadata> {
