@@ -1,3 +1,5 @@
+console.log("loaded scheduler");
+
 import schedule from "node-schedule";
 
 import { buildTelemetryPayload } from "../services/telemetry.service.js";

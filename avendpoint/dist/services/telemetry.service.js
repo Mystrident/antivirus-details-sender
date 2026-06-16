@@ -1,3 +1,4 @@
+console.log("loaded telemetry");
 import { getAntivirusInfo } from "../collectors/antivirus.js";
 import { getSystemInfo } from "../collectors/system.js";
 export async function buildTelemetryPayload() {

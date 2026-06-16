@@ -1,3 +1,4 @@
+console.log("generic collector");
 export async function collectGenericAntivirus(product) {
     return {
         productName: product.displayName,

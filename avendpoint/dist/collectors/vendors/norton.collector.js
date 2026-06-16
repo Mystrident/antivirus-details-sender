@@ -1,3 +1,4 @@
+console.log("norton collector");
 import { getNortonMetrics } from "./norton.db.js";
 export async function collectNorton(product) {
     const metrics = await getNortonMetrics();

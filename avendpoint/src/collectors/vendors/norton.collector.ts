@@ -1,3 +1,5 @@
+console.log("norton collector");
+
 import type { AntivirusInfo } from "../../types/antivirus.js";
 import { getNortonMetrics } from "./norton.db.js";
 

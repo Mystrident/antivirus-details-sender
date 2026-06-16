@@ -20,13 +20,14 @@
   "dependencies": {
     "axios": "^1.17.0",
     "node-schedule": "^2.1.1",
-    "registry-js": "^1.16.1",
     "sqlite3": "^6.0.1",
+    "winreg": "^1.2.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
     "@types/node-schedule": "^2.1.8",
+    "@types/winreg": "^1.2.36",
     "esbuild": "^0.28.1",
     "pkg": "^5.8.1",
     "ts-node": "^10.9.2",

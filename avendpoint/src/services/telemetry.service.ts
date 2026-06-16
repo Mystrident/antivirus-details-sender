@@ -1,3 +1,5 @@
+console.log("loaded telemetry");
+
 import { getAntivirusInfo } from "../collectors/antivirus.js";
 import { getSystemInfo } from "../collectors/system.js";
 import type { TelemetryPayload } from "../types/telemetry.js";

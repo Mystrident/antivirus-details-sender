@@ -1,3 +1,5 @@
+console.log("generic collector");
+
 import type { AntivirusInfo } from "../../types/antivirus.js";
 
 export async function collectGenericAntivirus(

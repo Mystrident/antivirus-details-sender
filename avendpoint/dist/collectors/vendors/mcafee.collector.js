@@ -1,14 +1,20 @@
-import { enumerateValues, HKEY } from "registry-js";
 import { getMcAfeeMetrics } from "./mcafee.db.js";
-async function getMcAfeeVersion() {
-    try {
-        const values = enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\McAfee\\wps");
-        const version = values.find((v) => v.name.toLowerCase() === "version");
-        return version?.data?.toString() ?? null;
-    }
-    catch {
-        return null;
-    }
+import Registry from "winreg";
+function getMcAfeeVersion() {
+    return new Promise((resolve) => {
+        const regKey = new Registry({
+            hive: Registry.HKLM,
+            key: "\\SOFTWARE\\McAfee\\wps"
+        });
+        regKey.get("Version", (err, item) => {
+            if (err || !item) {
+                resolve(null);
+            }
+            else {
+                resolve(item.value.trim());
+            }
+        });
+    });
 }
 export async function collectMcAfee(product) {
     const version = await getMcAfeeVersion();

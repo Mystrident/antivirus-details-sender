@@ -1,7 +1,9 @@
+console.log("before import");
 import { startScheduler, sendHeartbeat } from "./scheduler/scheduler.js";
 async function bootstrap() {
-    await sendHeartbeat(); // immediate
-    startScheduler(); // recurring
+    console.log("starting...");
+    await sendHeartbeat();
+    startScheduler();
     console.log("Agent running");
 }
-bootstrap();
+bootstrap().catch(console.error);

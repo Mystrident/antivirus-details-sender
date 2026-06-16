@@ -1,6 +1,5 @@
 import type { AntivirusInfo } from "../types/antivirus.js";
-
-import { enumerateValues, HKEY } from "registry-js";
+import fs from "fs";
 
 import { collectMcAfee } from "./vendors/mcafee.collector.js";
 import { collectNorton } from "./vendors/norton.collector.js";
@@ -13,10 +12,8 @@ interface AntivirusProduct {
 
 function isMcAfeeInstalled(): boolean {
   try {
-    return (
-      enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\McAfee\\wps").length >
-      0
-    );
+    // Matches the directory where McAfee metrics and DB reside
+    return fs.existsSync("C:\\ProgramData\\McAfee\\wps");
   } catch {
     return false;
   }
@@ -24,9 +21,8 @@ function isMcAfeeInstalled(): boolean {
 
 function isNortonInstalled(): boolean {
   try {
-    return (
-      enumerateValues(HKEY.HKEY_LOCAL_MACHINE, "SOFTWARE\\Norton").length > 0
-    );
+    // Matches the directory where Norton metrics and DB reside
+    return fs.existsSync("C:\\ProgramData\\Norton\\Antivirus");
   } catch {
     return false;
   }

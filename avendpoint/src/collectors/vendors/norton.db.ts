@@ -1,3 +1,5 @@
+console.log("norton db");
+
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -51,12 +53,19 @@ function findNortonDb(): string | null {
 }
 
 function getExpiryDate(): string | null {
-  const logDir = "C:\\ProgramData\\Norton\\VPN\\log";
+  const logDir = "C:\\ProgramData\\Norton\\Antivirus\\Log";
 
   try {
     const files = fs
       .readdirSync(logDir)
-      .filter((f) => f.toLowerCase().startsWith("vpn_svc"))
+      .filter((f) => {
+        const lower = f.toLowerCase();
+
+        return (
+          lower.startsWith("nortonui") &&
+          (lower.endsWith(".log") || lower.endsWith(".log.old"))
+        );
+      })
       .map((f) => ({
         path: path.join(logDir, f),
         mtime: fs.statSync(path.join(logDir, f)).mtimeMs,
@@ -65,15 +74,36 @@ function getExpiryDate(): string | null {
 
     for (const file of files) {
       try {
-        const content = fs.readFileSync(file.path, "utf8");
+        const tempFile = path.join(
+          os.tmpdir(),
+          `norton-log-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}.log`,
+        );
 
-        const matches = [...content.matchAll(/expirationTime:\s*(\d+)/g)];
-
-        const latestMatch = matches.at(-1);
-
-        if (!latestMatch) {
+        try {
+          fs.copyFileSync(file.path, tempFile);
+        } catch {
           continue;
         }
+
+        const content = fs.readFileSync(tempFile, "utf8");
+
+        try {
+          fs.unlinkSync(tempFile);
+        } catch {}
+
+        const matches = [
+          ...content.matchAll(
+            /"licExpirationTime"\s*:\s*(\d+)/gi,
+          ),
+        ];
+
+        if (matches.length === 0) {
+          continue;
+        }
+
+        const latestMatch = matches[matches.length - 1];
 
         const unixSeconds = Number(latestMatch[1]);
 
@@ -81,18 +111,42 @@ function getExpiryDate(): string | null {
           continue;
         }
 
-        return new Date(unixSeconds * 1000).toISOString();
-      } catch {
-        continue;
+        console.log(
+          "NORTON EXPIRY TIMESTAMP:",
+          unixSeconds,
+        );
+
+        const expiryDate = new Date(
+          unixSeconds * 1000,
+        ).toISOString();
+
+        console.log(
+          "NORTON EXPIRY DATE:",
+          expiryDate,
+        );
+
+        return expiryDate;
+      } catch (err) {
+        console.error(
+          "Failed processing Norton log:",
+          file.path,
+          err,
+        );
       }
     }
-  } catch {}
+  } catch (err) {
+    console.error(
+      "Failed accessing Norton log directory:",
+      err,
+    );
+  }
 
   return null;
 }
 
 export async function getNortonMetrics(): Promise<NortonMetrics> {
   const sourceDb = findNortonDb();
+  
 
   if (!sourceDb) {
     return emptyMetrics();
@@ -110,6 +164,9 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
   }
 
   const expiryDate = getExpiryDate();
+  console.log("NORTON EXPIRY DATE: ",expiryDate);
+
+  
 
   return new Promise((resolve) => {
     const db = new sqlite3.Database(
@@ -130,52 +187,114 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
     );
 
     db.all(
-      `
-      SELECT name, value
-      FROM node_values
-      WHERE node_id IN (8, 9)
-      `,
-      [],
-      (err, rows: any[]) => {
-        db.close(() => {
-          try {
-            fs.unlinkSync(tempDb);
-          } catch {}
-        });
+  `
+  SELECT name, value
+  FROM node_values
+  WHERE node_id IN (8, 9)
+  `,
+  [],
+  async (err, rows: any[]) => {
+    db.close(() => {
+      try {
+        fs.unlinkSync(tempDb);
+      } catch {}
+    });
 
-        if (err) {
-          resolve({
-            ...emptyMetrics(),
-            expiryDate,
-          });
-          return;
-        }
+    if (err) {
+      resolve({
+        ...emptyMetrics(),
+        expiryDate,
+      });
+      return;
+    }
 
-        const values = new Map<string, string>();
+    const values = new Map<string, string>();
 
-        for (const row of rows ?? []) {
-          values.set(
-            String(row.name),
-            row.value != null ? String(row.value) : "",
-          );
-        }
+    for (const row of rows ?? []) {
+      values.set(
+        String(row.name),
+        row.value != null ? String(row.value) : "",
+      );
+    }
 
-        const state = values.get("state");
+    const state = values.get("state");
 
-        resolve({
-          productName: values.get("prodName") ?? null,
+    let lastScan: string | null = null;
 
-          version: values.get("prodVersion") ?? null,
+    try {
+      const logDbPath =
+        "C:\\ProgramData\\Norton\\Antivirus\\Log.db";
 
-          enabled: state === "GOOD" || state === "ACTIVE",
+      const tempLogDb = path.join(
+        os.tmpdir(),
+        `norton-log-${Date.now()}.db`,
+      );
 
-          quarantineCount: 0,
+      fs.copyFileSync(logDbPath, tempLogDb);
 
-          lastScan: null,
+      lastScan = await new Promise<string | null>((resolveScan) => {
+        const scanDb = new sqlite3.Database(
+          tempLogDb,
+          sqlite3.OPEN_READONLY,
+        );
 
-          expiryDate,
-        });
-      },
-    );
+        scanDb.get(
+          `
+          SELECT Started
+          FROM ScanSession
+          WHERE Type = 3
+          ORDER BY Id DESC
+          LIMIT 1
+          `,
+          [],
+          (scanErr, scanRow: any) => {
+            scanDb.close(() => {
+              try {
+                fs.unlinkSync(tempLogDb);
+              } catch {}
+            });
+
+            if (
+              scanErr ||
+              !scanRow ||
+              !scanRow.Started
+            ) {
+              resolveScan(null);
+              return;
+            }
+
+            resolveScan(
+              new Date(
+                Number(scanRow.Started) * 1000,
+              ).toISOString(),
+            );
+          },
+        );
+      });
+    } catch (e) {
+      console.error("Failed reading Log.db", e);
+    }
+
+    resolve({
+      productName:
+        values.get("prodName") ?? null,
+
+      version:
+        values.get("prodVersion") ?? null,
+
+      enabled:
+        state === "GOOD" ||
+        state === "ACTIVE",
+
+      quarantineCount: 0,
+
+      lastScan,
+
+      expiryDate,
+
+      
+    });
+  },
+);
   });
 }
