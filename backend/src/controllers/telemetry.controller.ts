@@ -1,8 +1,18 @@
 import { upsertEndpoint } from "../repositories/endpoint.repository.js";
 import { getAllEndpoints } from "../repositories/endpoint.repository.js";
+import { telemetrySchema } from "../validators/telemetry.validator.js";
 
 export async function receiveTelemetry(req: any, res: any) {
-  await upsertEndpoint(req.body);
+  const validation = telemetrySchema.safeParse(req.body);
+
+  if (!validation.success) {
+    return res.status(400).json({
+      success: false,
+      errors: validation.error.issues,
+    });
+  }
+
+  await upsertEndpoint(validation.data);
 
   res.json({
     success: true,

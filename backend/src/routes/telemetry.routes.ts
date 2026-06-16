@@ -1,4 +1,7 @@
 import { Router } from "express";
+
+import { verifyAgent } from "../middleware/auth.middleware.js";
+
 import {
   receiveTelemetry,
   fetchEndpoints,
@@ -6,6 +9,6 @@ import {
 
 const router = Router();
 
-router.post("/antivirus", receiveTelemetry);
+router.post("/antivirus", verifyAgent, receiveTelemetry);
 router.get("/endpoints", fetchEndpoints);
 export default router;

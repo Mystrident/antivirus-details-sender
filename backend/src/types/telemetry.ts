@@ -1,6 +1,15 @@
 export interface TelemetryPayload {
   hostname: string;
+
   osName: string;
+
+  macAddress: string | null;
+
+  username: string | null;
+
+  assetId: string | null;
+
+  location: string | null;
 
   antivirus: {
     productName: string;
@@ -9,13 +18,9 @@ export interface TelemetryPayload {
 
     enabled: boolean;
 
-    quarantineCount: number;
-
     lastScan: string | null;
 
     expiryDate: string | null;
-
-    needsUpdate: boolean | null;
   };
 
   collectedAt: string;

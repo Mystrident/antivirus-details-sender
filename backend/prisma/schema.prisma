@@ -8,31 +8,39 @@ datasource db {
 }
 
 model Endpoint {
-  id        String         @id @default(cuid())
-  hostname  String         @unique
-  osName    String
-  lastSeen  DateTime
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  antivirus AntivirusInfo?
+  id          Int       @id @default(autoincrement())
+
+  hostname    String
+
+  osName      String
+
+  macAddress  String    @unique
+
+  username    String?
+
+  assetId     String?
+
+  location    String?
+
+  lastSeen    DateTime
+
+  antivirus   Antivirus?
 }
 
-model AntivirusInfo {
-  id String @id @default(cuid())
+model Antivirus {
+  id           Int       @id @default(autoincrement())
 
-  endpointId String @unique
+  productName  String
 
-  productName String
-  version     String?
+  version      String?
 
-  enabled Boolean
-  
-  quarantineCount Int @default(0)
+  enabled      Boolean
 
-  lastScan String?
-  expiryDate DateTime?
+  lastScan     String?
 
-  needsUpdate Boolean?
+  expiryDate   DateTime?
 
-  endpoint Endpoint @relation(fields: [endpointId], references: [id])
+  endpointId   Int       @unique
+
+  endpoint     Endpoint  @relation(fields: [endpointId], references: [id], onDelete: Cascade)
 }
