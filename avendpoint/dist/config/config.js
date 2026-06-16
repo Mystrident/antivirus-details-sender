@@ -1,3 +1,4 @@
 export const config = {
-    serverUrl: "https://antivirus-details-sender.onrender.com",
+    serverUrl: process.env.SERVER_URL,
+    apiKey: process.env.AGENT_API_KEY,
 };

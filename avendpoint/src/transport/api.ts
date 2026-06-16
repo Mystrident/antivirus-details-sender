@@ -1,9 +1,10 @@
 import axios from "axios";
-import { config } from "../config/config.js";
-import type { TelemetryPayload } from "../types/telemetry.js";
+import { getRuntimeConfig } from "../config/runtime-config.js";
 
-export async function sendTelemetry(payload: TelemetryPayload): Promise<void> {
-  if (!config.serverUrl.startsWith("https://")) {
+export async function sendTelemetry(payload: any) {
+  const config = await getRuntimeConfig();
+
+  if (!config.serverUrl || !config.serverUrl.startsWith("https://")) {
     throw new Error("Only HTTPS endpoints are allowed");
   }
 

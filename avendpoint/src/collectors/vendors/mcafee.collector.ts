@@ -23,8 +23,6 @@ export async function collectMcAfee(product: any): Promise<AntivirusInfo> {
   const version = await getMcAfeeVersion();
   const metrics = await getMcAfeeMetrics();
 
-  console.log("MCAFEE METRICS:", metrics);
-
   return {
     productName: product.displayName,
     version,

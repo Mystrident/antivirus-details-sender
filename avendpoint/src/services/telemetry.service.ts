@@ -19,7 +19,7 @@ export async function buildTelemetryPayload(): Promise<TelemetryPayload> {
 
     macAddress: endpoint.macAddress,
 
-    username: endpoint.username,
+    username: installer.username,
 
     assetId: installer.assetId,
 

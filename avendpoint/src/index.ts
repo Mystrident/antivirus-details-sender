@@ -1,4 +1,4 @@
-console.log("before import");
+import "dotenv/config";
 
 import { startScheduler, sendHeartbeat } from "./scheduler/scheduler.js";
 

@@ -1,8 +1,6 @@
 console.log("mcafee db");
 import fs from "fs";
-import os from "os";
 import path from "path";
-import sqlite3 from "sqlite3";
 function getSortedEtlFiles() {
     const logDir = "C:\\ProgramData\\McAfee\\wps\\log";
     try {
@@ -48,61 +46,9 @@ function getMcAfeeExpiryDate() {
     }
     return null;
 }
-function getMcAfeeUiMetrics() {
+export async function getMcAfeeMetrics() {
     return {
         lastScan: getMcAfeeLastScan(),
         expiryDate: getMcAfeeExpiryDate(),
     };
-}
-export async function getMcAfeeMetrics() {
-    const sourceDb = "C:\\ProgramData\\McAfee\\wps\\DA.db";
-    const tempDb = path.join(os.tmpdir(), "mcafee-da.db");
-    try {
-        fs.copyFileSync(sourceDb, tempDb);
-    }
-    catch {
-        const uiMetrics = getMcAfeeUiMetrics();
-        return {
-            quarantineCount: 0,
-            lastScan: uiMetrics.lastScan,
-            expiryDate: uiMetrics.expiryDate,
-        };
-    }
-    return new Promise((resolve) => {
-        const db = new sqlite3.Database(tempDb);
-        const query = `
-      SELECT
-        c.VALUE_NAME,
-        v.VALUE,
-        v.TIMESTAMP
-      FROM daeventvalues v
-      JOIN daeventconfigs c
-        ON v.CONFIG_ID = c.CONFIG_ID
-      WHERE c.EVENT_ID = 'antivirus'
-      ORDER BY v.TIMESTAMP DESC
-      LIMIT 100
-    `;
-        db.all(query, [], (err, rows) => {
-            db.close();
-            try {
-                fs.unlinkSync(tempDb);
-            }
-            catch { }
-            const uiMetrics = getMcAfeeUiMetrics();
-            if (err || !rows?.length) {
-                resolve({
-                    quarantineCount: 0,
-                    lastScan: uiMetrics.lastScan,
-                    expiryDate: uiMetrics.expiryDate,
-                });
-                return;
-            }
-            console.log(rows.slice(0, 20));
-            resolve({
-                quarantineCount: Number(rows.find((r) => r.VALUE_NAME === "items_quarantined")?.VALUE ?? 0),
-                lastScan: uiMetrics.lastScan,
-                expiryDate: uiMetrics.expiryDate,
-            });
-        });
-    });
 }

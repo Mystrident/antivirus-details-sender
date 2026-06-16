@@ -7,9 +7,7 @@ export async function collectNorton(product) {
         productName: metrics.productName ?? product.displayName,
         version: metrics.version,
         enabled: metrics.enabled,
-        quarantineCount: metrics.quarantineCount,
         lastScan: metrics.lastScan,
         expiryDate: metrics.expiryDate,
-        needsUpdate: null,
     };
 }
