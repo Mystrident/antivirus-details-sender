@@ -1,17 +1,11 @@
 import { z } from "zod";
 
 export const telemetrySchema = z.object({
-  hostname: z.string(),
-
-  osName: z.string(),
-
   macAddress: z.string(),
 
-  username: z.string().nullable(),
+  assetId: z.string(),
 
-  assetId: z.string().nullable(),
-
-  location: z.string().nullable(),
+  location: z.string(),
 
   antivirus: z.object({
     productName: z.string(),

@@ -1,15 +1,9 @@
 export interface TelemetryPayload {
-  hostname: string;
+  assetId: string;
 
-  osName: string;
+  location: string;
 
   macAddress: string | null;
-
-  username: string | null;
-
-  assetId: string | null;
-
-  location: string | null;
 
   antivirus: {
     productName: string;

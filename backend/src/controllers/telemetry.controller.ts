@@ -1,6 +1,7 @@
-import { upsertEndpoint } from "../repositories/endpoint.repository.js";
-import { getAllEndpoints } from "../repositories/endpoint.repository.js";
 import { telemetrySchema } from "../validators/telemetry.validator.js";
+import { upsertAVStat } from "../repositories/avstat.repository.js";
+import { syncExpiryAlert } from "../services/expiry-alert.service.js";
+import { syncScanAlert } from "../services/scan-alert.service.js";
 
 export async function receiveTelemetry(req: any, res: any) {
   const validation = telemetrySchema.safeParse(req.body);
@@ -12,32 +13,9 @@ export async function receiveTelemetry(req: any, res: any) {
     });
   }
 
-  await upsertEndpoint(validation.data);
+  const stat = await upsertAVStat(validation.data);
 
-  res.json({
-    success: true,
-  });
-}
+  await syncScanAlert(stat);
 
-export async function fetchEndpoints(req: any, res: any) {
-  try {
-    const endpoints = await getAllEndpoints();
-
-    const result = endpoints.map((endpoint: any) => {
-      const diff = Date.now() - new Date(endpoint.lastSeen).getTime();
-
-      return {
-        ...endpoint,
-        status: diff < 15 * 60 * 1000 ? "ONLINE" : "OFFLINE",
-      };
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-    });
-  }
+  await syncExpiryAlert(stat);
 }
