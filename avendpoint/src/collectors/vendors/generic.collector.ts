@@ -1,10 +1,10 @@
 console.log("generic collector");
 
-import type { AntivirusInfo } from "../../types/antivirus.js";
+import type { TelemetryPayload } from "../../types/telemetry.js";
 
 export async function collectGenericAntivirus(
   product: any,
-): Promise<AntivirusInfo> {
+): Promise<TelemetryPayload["antivirus"]> {
   return {
     productName: product.displayName,
 

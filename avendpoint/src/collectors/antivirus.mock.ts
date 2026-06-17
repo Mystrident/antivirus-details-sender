@@ -1,6 +1,8 @@
-import type { AntivirusInfo } from "../types/antivirus.js";
+import type { TelemetryPayload } from "../types/telemetry.js";
 
-export async function getMockAntivirusInfo(): Promise<AntivirusInfo> {
+export async function getMockAntivirusInfo(): Promise<
+  TelemetryPayload["antivirus"]
+> {
   return {
     productName: "Invalid OS",
     version: "0",

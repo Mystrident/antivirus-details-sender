@@ -1,4 +1,4 @@
-import type { AntivirusInfo } from "../types/antivirus.js";
+import type { TelemetryPayload } from "../types/telemetry.js";
 import fs from "fs";
 
 import { collectMcAfee } from "./vendors/mcafee.collector.js";
@@ -28,7 +28,9 @@ function isNortonInstalled(): boolean {
   }
 }
 
-export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
+export async function getWindowsAntivirusInfo(): Promise<
+  TelemetryPayload["antivirus"]
+> {
   try {
     if (isMcAfeeInstalled()) {
       const antivirus: AntivirusProduct = {
@@ -61,7 +63,6 @@ export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
       enabled: false,
       lastScan: null,
       expiryDate: null,
-      
     };
   }
 }

@@ -1,9 +1,11 @@
 console.log("norton collector");
 
-import type { AntivirusInfo } from "../../types/antivirus.js";
+import type { TelemetryPayload } from "../../types/telemetry.js";
 import { getNortonMetrics } from "./norton.db.js";
 
-export async function collectNorton(product: any): Promise<AntivirusInfo> {
+export async function collectNorton(
+  product: any,
+): Promise<TelemetryPayload["antivirus"]> {
   const metrics = await getNortonMetrics();
 
   console.log("NORTON METRICS:", metrics);

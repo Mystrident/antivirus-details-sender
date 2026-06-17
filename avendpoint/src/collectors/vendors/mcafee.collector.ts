@@ -1,4 +1,4 @@
-import type { AntivirusInfo } from "../../types/antivirus.js";
+import { TelemetryPayload } from "../../types/telemetry.js";
 import { getMcAfeeMetrics } from "./mcafee.db.js";
 import Registry from "winreg";
 
@@ -19,7 +19,9 @@ function getMcAfeeVersion(): Promise<string | null> {
   });
 }
 
-export async function collectMcAfee(product: any): Promise<AntivirusInfo> {
+export async function collectMcAfee(
+  product: any,
+): Promise<TelemetryPayload["antivirus"]> {
   const version = await getMcAfeeVersion();
   const metrics = await getMcAfeeMetrics();
 
