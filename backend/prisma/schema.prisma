@@ -7,40 +7,60 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Endpoint {
-  id          Int       @id @default(autoincrement())
+model AVStatRepo {
+  id                    String   @id @default(cuid())
 
-  hostname    String
+  assetId               String
 
-  osName      String
+  location              String
 
-  macAddress  String    @unique
+  macAddress            String
 
-  username    String?
+  avInstalled           String
 
-  assetId     String?
+  version               String?
 
-  location    String?
+  lastScanDate          DateTime?
 
-  lastSeen    DateTime
+  expiryDate            DateTime?
 
-  antivirus   Antivirus?
+  lastTelemetryReceived DateTime
+
+  createdAt             DateTime @default(now())
+
+  updatedAt             DateTime @updatedAt
+
+  @@unique([location, assetId])
 }
 
-model Antivirus {
-  id           Int       @id @default(autoincrement())
+model AVScanAlert {
+  id              String   @id @default(cuid())
 
-  productName  String
+  assetId         String
 
-  version      String?
+  location        String
 
-  enabled      Boolean
+  macAddress      String
 
-  lastScan     String?
+  lastScanDate    DateTime?
 
-  expiryDate   DateTime?
+  alertCreatedAt  DateTime @default(now())
 
-  endpointId   Int       @unique
+  @@unique([location, assetId])
+}
 
-  endpoint     Endpoint  @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+model AVExpiryAlert {
+  id              String   @id @default(cuid())
+
+  assetId         String
+
+  location        String
+
+  macAddress      String
+
+  expiryDate      DateTime?
+
+  alertCreatedAt  DateTime @default(now())
+
+  @@unique([location, assetId])
 }
