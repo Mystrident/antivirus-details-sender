@@ -36,7 +36,13 @@ function getMcAfeeLastScan(): string | null {
       const match = content.match(/lastScanInformation:\s*(\d+)/);
 
       if (match) {
-        return `${match[1]} days ago`;
+        const daysAgo = Number(match[1]);
+
+        const scanDate = new Date();
+
+        scanDate.setDate(scanDate.getDate() - daysAgo);
+
+        return scanDate.toISOString();
       }
     } catch {}
   }
