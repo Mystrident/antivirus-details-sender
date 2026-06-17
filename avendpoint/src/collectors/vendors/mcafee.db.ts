@@ -33,18 +33,22 @@ function getMcAfeeLastScan(): string | null {
     try {
       const content = fs.readFileSync(file, "utf8");
 
-      const match = content.match(/lastScanInformation:\s*(\d+)/);
+      const match = content.match(/Formatting timestamp:\s*(\d+)/);
 
       if (match) {
-        const daysAgo = Number(match[1]);
+        const unixTimestamp = Number(match[1]);
 
-        const scanDate = new Date();
+        const scanDate = new Date(unixTimestamp * 1000);
 
-        scanDate.setDate(scanDate.getDate() - daysAgo);
+        if (!isNaN(scanDate.getTime())) {
+          console.log("McAfee Last Scan:", scanDate.toISOString());
 
-        return scanDate.toISOString();
+          return scanDate.toISOString();
+        }
       }
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   return null;
@@ -60,9 +64,15 @@ function getMcAfeeExpiryDate(): string | null {
       const match = content.match(/"expiryTime":(\d+)/);
 
       if (match) {
+        console.log(
+          "McAfee Expiry Date:",
+          new Date(Number(match[1])).toISOString(),
+        );
         return new Date(Number(match[1])).toISOString();
       }
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   return null;
