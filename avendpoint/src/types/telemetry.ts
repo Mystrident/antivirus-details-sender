@@ -1,19 +1,21 @@
-import type { AntivirusInfo } from "./antivirus.js";
-
 export interface TelemetryPayload {
-  hostname: string;
+  assetId: string;
 
-  osName: string;
+  location: string;
 
   macAddress: string | null;
 
-  username: string | null;
+  antivirus: {
+    productName: string;
 
-  assetId: string | null;
+    version: string | null;
 
-  location: string | null;
+    enabled: boolean;
 
-  antivirus: AntivirusInfo;
+    lastScan: string | null;
+
+    expiryDate: string | null;
+  };
 
   collectedAt: string;
 }
