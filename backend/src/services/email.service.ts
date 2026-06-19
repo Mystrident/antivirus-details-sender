@@ -1,9 +1,17 @@
-import dotenv from "dotenv";
 import dns from "dns";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+
+dns.setDefaultResultOrder("ipv4first");
 
 dotenv.config();
 
-import nodemailer from "nodemailer";
+dns.lookup("smtp.gmail.com", (err, address, family) => {
+  console.log({
+    address,
+    family,
+  });
+});
 
 export const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
@@ -17,14 +25,15 @@ export const transporter = nodemailer.createTransport({
 });
 
 export async function sendAlertMail(scanCsv: string, expiryCsv: string) {
-  dns.lookup("smtp.gmail.com", (err, address, family) => {
-    console.log({ address, family });
-  });
-
   console.log({
     EMAIL_USER: process.env.EMAIL_USER,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
   });
+
+  await transporter.verify();
+
+  console.log("SMTP VERIFIED");
+
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
 
