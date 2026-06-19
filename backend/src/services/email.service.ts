@@ -1,60 +1,38 @@
-import dns from "dns";
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
+import { Resend } from "resend";
 
-dns.setDefaultResultOrder("ipv4first");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-dotenv.config();
+export async function sendAlertEmail(
+  scanCsvPath: string,
+  expiryCsvPath: string,
+) {
+  console.log("Sending email...");
 
-dns.lookup("smtp.gmail.com", (err, address, family) => {
-  console.log({
-    address,
-    family,
-  });
-});
+  const result = await resend.emails.send({
+    from: "onboarding@resend.dev",
 
-export const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-export async function sendAlertMail(scanCsv: string, expiryCsv: string) {
-  console.log({
-    EMAIL_USER: process.env.EMAIL_USER,
-    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  });
-
-  await transporter.verify();
-
-  console.log("SMTP VERIFIED");
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-
-    to: process.env.ADMIN_EMAIL,
+    to: process.env.ADMIN_EMAIL!,
 
     subject: "Weekly Antivirus Alert Report",
 
-    text: "Attached are this week's antivirus alerts.",
+    text: "Attached are this week's antivirus reports.",
 
     attachments: [
       {
         filename: "scan-alerts.csv",
-
-        path: scanCsv,
+        content: Buffer.from(
+          await import("fs").then((fs) => fs.readFileSync(scanCsvPath)),
+        ).toString("base64"),
       },
 
       {
         filename: "expiry-alerts.csv",
-
-        path: expiryCsv,
+        content: Buffer.from(
+          await import("fs").then((fs) => fs.readFileSync(expiryCsvPath)),
+        ).toString("base64"),
       },
     ],
   });
+
+  console.log(result);
 }
