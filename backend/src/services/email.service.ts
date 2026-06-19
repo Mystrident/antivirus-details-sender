@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import dns from "dns";
 
 dotenv.config();
 
@@ -16,9 +17,9 @@ export const transporter = nodemailer.createTransport({
 });
 
 export async function sendAlertMail(scanCsv: string, expiryCsv: string) {
-  await transporter.verify();
-
-  console.log("SMTP VERIFIED");
+  dns.lookup("smtp.gmail.com", (err, address, family) => {
+    console.log({ address, family });
+  });
 
   console.log({
     EMAIL_USER: process.env.EMAIL_USER,
