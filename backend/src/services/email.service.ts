@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -11,6 +12,10 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function sendAlertMail(scanCsv: string, expiryCsv: string) {
+  console.log({
+    EMAIL_USER: process.env.EMAIL_USER,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+  });
   await transporter.sendMail({
     from: process.env.EMAIL_USER,
 
