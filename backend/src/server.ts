@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { startWeeklyReportJob } from "./jobs/weekly-report.job.js";
+import { startCleanupJob } from "./jobs/cleanup.job.js";
 
 import telemetryRoutes from "./routes/telemetry.routes.js";
 
@@ -17,3 +19,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+startCleanupJob();
+
+startWeeklyReportJob();

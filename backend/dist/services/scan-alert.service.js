@@ -1,10 +1,11 @@
 import { prisma } from "../prisma.js";
+import { daysBetween } from "../utils/date.js";
 export async function syncScanAlert(stat) {
     if (!stat.lastScanDate) {
         return;
     }
-    const ageDays = Math.floor((Date.now() - stat.lastScanDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (ageDays > 7) {
+    const age = daysBetween(stat.lastScanDate);
+    if (age > 7) {
         await prisma.aVScanAlert.upsert({
             where: {
                 location_assetId: {
@@ -14,6 +15,7 @@ export async function syncScanAlert(stat) {
             },
             update: {
                 lastScanDate: stat.lastScanDate,
+                macAddress: stat.macAddress,
             },
             create: {
                 assetId: stat.assetId,
@@ -26,8 +28,8 @@ export async function syncScanAlert(stat) {
     else {
         await prisma.aVScanAlert.deleteMany({
             where: {
-                location: stat.location,
                 assetId: stat.assetId,
+                location: stat.location,
             },
         });
     }
