@@ -16,18 +16,7 @@ export interface NortonMetrics {
   expiryDate: string | null;
 }
 
-function emptyMetrics(): NortonMetrics {
-  return {
-    productName: null,
-    version: null,
 
-    enabled: false,
-
-    lastScan: null,
-
-    expiryDate: null,
-  };
-}
 
 function findNortonDb(): string | null {
   const dir = "C:\\ProgramData\\Norton\\Antivirus\\o2"; // Define the directory path where the Norton database files are located. This is a specific path on Windows systems where Norton Antivirus stores its database files.
@@ -115,7 +104,8 @@ JavaScript
 ]*/
 
     return dbFiles.length > 0 ? dbFiles[0].fullPath : null;
-  } catch {
+  } catch(err) {
+    console.log("error is ",err);
     return null;
   }
 }
@@ -149,7 +139,8 @@ function getExpiryDate(): string | null {
 
         try {
           fs.copyFileSync(file.path, tempFile);
-        } catch {
+        } catch(e) {
+          console.log("error is : ",e)
           continue;
         }
 
@@ -157,7 +148,9 @@ function getExpiryDate(): string | null {
 
         try {
           fs.unlinkSync(tempFile);
-        } catch {}
+        } catch(e) {
+          console.log("error is : ",e)
+        }
 
         const matches = [
           ...content.matchAll(/"licExpirationTime"\s*:\s*(\d+)/gi),
@@ -169,10 +162,13 @@ function getExpiryDate(): string | null {
 
         const latestMatch = matches[matches.length - 1];
 
+        console.log("latestmatch is : ",latestMatch);
+
         const unixSeconds = Number(latestMatch[1]);
 
-        if (Number.isNaN(unixSeconds)) {
-          continue;
+        if (Number.isNaN(unixSeconds)||unixSeconds<=0) {
+          console.log("norton license expired (licExpirationTime=0)");
+          return "EXPIRED";
         }
 
         console.log("NORTON EXPIRY TIMESTAMP:", unixSeconds);
@@ -194,9 +190,15 @@ function getExpiryDate(): string | null {
 }
 
 export async function getNortonMetrics(): Promise<NortonMetrics> {
+
+  console.log("entered norton metrics ");
+  console.log("=========");
   const sourceDb = findNortonDb();
 
+  console.log("source db found: ",sourceDb);
+
   if (!sourceDb) {
+    console.log("no source db found");
     return emptyMetrics();
   }
 
@@ -207,11 +209,13 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
 
   try {
     fs.copyFileSync(sourceDb, tempDb);
-  } catch {
+  } catch(e) {
+    console.log("error is : ",e)
     return emptyMetrics();
   }
 
   const expiryDate = getExpiryDate();
+  
   console.log("NORTON EXPIRY DATE: ", expiryDate);
 
   return new Promise((resolve) => {
@@ -222,7 +226,9 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
         if (openErr) {
           try {
             fs.unlinkSync(tempDb);
-          } catch {}
+          } catch(e) {
+            console.log("error is : ",e)
+          }
 
           resolve({
             ...emptyMetrics(),
@@ -232,21 +238,31 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
       },
     );
 
+    console.log("====");
+    console.log("opening norton sqlite");
+    console.log("source db: ",sourceDb);
+    console.log("===");
+    console.log("temp db: ",tempDb);
+    console.log("====");
+
     db.all(
       `
   SELECT name, value
   FROM node_values
-  WHERE node_id IN (8, 9)
+  
   `,
       [],
       async (err, rows: any[]) => {
         db.close(() => {
           try {
             fs.unlinkSync(tempDb);
-          } catch {}
+          } catch(e) {
+            console.log("error is : ",e)
+          }
         });
 
         if (err) {
+          console.error("sql error: ",err);
           resolve({
             ...emptyMetrics(),
             expiryDate,
@@ -254,14 +270,23 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
           return;
         }
 
+        console.log("total rows : ", rows?.length);
+        if(rows?.length){console.log("first 20 rows: ");
+          console.table(rows.slice(0,20));
+        }
         const values = new Map<string, string>();
 
         for (const row of rows ?? []) {
+
+          console.log("row: ",row.node_id,row.name,row.value);
           values.set(
             String(row.name),
             row.value != null ? String(row.value) : "",
           );
         }
+
+        console.log("ROWS",rows);
+        console.log("VALUES: ", Object.fromEntries(values));
 
         const state = values.get("state");
 
@@ -296,7 +321,9 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
                 scanDb.close(() => {
                   try {
                     fs.unlinkSync(tempLogDb);
-                  } catch {}
+                  } catch(e) {
+                    console.log("error is : ",e)
+                  }
                 });
 
                 if (scanErr || !scanRow || !scanRow.Started) {
@@ -328,4 +355,17 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
       },
     );
   });
+}
+
+function emptyMetrics(): NortonMetrics {
+  return {
+    productName: null,
+    version: null,
+
+    enabled: false,
+
+    lastScan: null,
+
+    expiryDate: getExpiryDate(),
+  };
 }
