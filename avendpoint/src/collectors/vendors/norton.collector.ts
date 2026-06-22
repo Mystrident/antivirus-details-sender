@@ -1,5 +1,3 @@
-console.log("norton collector");
-
 import type { TelemetryPayload } from "../../types/telemetry.js";
 import { getNortonMetrics } from "./norton.db.js";
 

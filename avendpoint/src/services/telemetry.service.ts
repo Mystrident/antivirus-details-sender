@@ -1,5 +1,3 @@
-console.log("loaded telemetry");
-
 import { getAntivirusInfo } from "../collectors/antivirus.js";
 import { getEndpointMetadata } from "../collectors/endpoint.js";
 import { getAgentConfig } from "../config/agent-config.js";

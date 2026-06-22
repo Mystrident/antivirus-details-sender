@@ -1,5 +1,3 @@
-console.log("loaded scheduler");
-
 import schedule from "node-schedule";
 import { sendFridayTelemetry } from "../services/friday-telemetry.service.js";
 

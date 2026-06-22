@@ -12,7 +12,6 @@ interface AntivirusProduct {
 
 function isMcAfeeInstalled(): boolean {
   try {
-    // Matches the directory where McAfee metrics and DB reside
     return fs.existsSync("C:\\ProgramData\\McAfee\\wps");
   } catch {
     return false;
@@ -21,7 +20,6 @@ function isMcAfeeInstalled(): boolean {
 
 function isNortonInstalled(): boolean {
   try {
-    // Matches the directory where Norton metrics and DB reside
     return fs.existsSync("C:\\ProgramData\\Norton\\Antivirus");
   } catch {
     return false;

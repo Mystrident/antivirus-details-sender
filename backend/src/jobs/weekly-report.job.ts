@@ -8,7 +8,7 @@ import { sendAlertMail } from "../services/email.service.js";
 
 export function startWeeklyReportJob() {
   cron.schedule(
-    "* * * * *",
+    "59 23 * * 5",
 
     async () => {
       const scanCsv = await generateScanCsv();
@@ -16,8 +16,6 @@ export function startWeeklyReportJob() {
       const expiryCsv = await generateExpiryCsv();
 
       await sendAlertMail(scanCsv, expiryCsv);
-
-      console.log("Weekly report mailed");
     },
   );
 }

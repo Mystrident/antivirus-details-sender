@@ -1,9 +1,7 @@
-console.log("norton db");
-
-import fs from "fs"; // Import the fs module to interact with the file system for reading and writing files, such as the Norton database and log files.
-import path from "path"; // Import the path module to handle and transform file paths, which is useful for constructing paths to the Norton database and log files in a cross-platform manner.
-import os from "os"; // Import the os module to access operating system-related utility methods and properties, such as getting the temporary directory for creating temporary files when processing Norton database and log files.
-import sqlite3 from "sqlite3"; // Import the sqlite3 module to interact with SQLite databases, which is used to read the Norton database and log files to extract relevant antivirus metrics such as product name, version, enabled status, last scan date, and expiry date.
+import fs from "fs";
+import path from "path";
+import os from "os";
+import sqlite3 from "sqlite3";
 
 export interface NortonMetrics {
   productName: string | null;
@@ -40,10 +38,11 @@ function findNortonDb(): string | null {
         fullPath: path.join(dir, f),
         mtime: fs.statSync(path.join(dir, f)).mtimeMs,
       }))
-      .sort((a, b) => b.mtime - a.mtime); /*
+      .sort((a, b) => b.mtime - a.mtime);
+    /*
       Before diving into each line, notice how the methods (.readdirSync(), .filter(), .map(), .sort()) are chained together using dots (.). The output of one line becomes the input for the next line. This allows the code to process the data in a continuous pipeline.
 
-Line-by-Line Breakdown
+      Line-by-Line Breakdown
 1. const dbFiles = fs
 What it is: This declares a constant variable named dbFiles to store the final, sorted list of files.
 
@@ -140,9 +139,12 @@ function getExpiryDate(): string | null {
       }))
       .sort((a, b) => b.mtime - a.mtime);
 
+    // thus expiry date is stored in nortonui*.log.old files, we need to read them to get the expiry date. We will read them starting from the newest one until we find a valid expiry date or run out of files.
+
     for (const file of files) {
       try {
         const tempFile = path.join(
+          // Create a temporary file path in the system's temporary directory. This is necessary because we might not have permission to read the original log file directly, or it might be locked by Norton while it's running. By copying it to a temp location, we can safely read its contents without interference.
           os.tmpdir(),
           `norton-log-${Date.now()}-${Math.random().toString(36).slice(2)}.log`,
         );
@@ -156,7 +158,7 @@ function getExpiryDate(): string | null {
         const content = fs.readFileSync(tempFile, "utf8");
 
         try {
-          fs.unlinkSync(tempFile);
+          fs.unlinkSync(tempFile); // Clean up the temporary file after reading its contents to avoid leaving unnecessary files on the system. This is done in a try-catch block to silently handle any errors that might occur during deletion, such as if the file is already deleted or if there are permission issues.
         } catch {}
 
         const matches = [
@@ -231,12 +233,11 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
         }
       },
     );
-
     db.all(
       `
   SELECT name, value
   FROM node_values
-  WHERE node_id IN (8, 9)
+   
   `,
       [],
       async (err, rows: any[]) => {

@@ -16,7 +16,6 @@ export async function sendFridayTelemetry() {
   const today = getTodayString();
 
   if (config.lastTelemetrySent === today) {
-    console.log("Friday telemetry already sent");
     return;
   }
 
