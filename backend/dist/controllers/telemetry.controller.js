@@ -3,14 +3,26 @@ import { upsertAVStat } from "../repositories/avstat.repository.js";
 import { syncExpiryAlert } from "../services/expiry-alert.service.js";
 import { syncScanAlert } from "../services/scan-alert.service.js";
 export async function receiveTelemetry(req, res) {
-    const validation = telemetrySchema.safeParse(req.body);
-    if (!validation.success) {
-        return res.status(400).json({
-            success: false,
-            errors: validation.error.issues,
+    try {
+        const validation = telemetrySchema.safeParse(req.body);
+        if (!validation.success) {
+            return res.status(400).json({
+                success: false,
+                errors: validation.error.issues,
+            });
+        }
+        const stat = await upsertAVStat(validation.data);
+        await syncScanAlert(stat);
+        await syncExpiryAlert(stat);
+        return res.status(200).json({
+            success: true,
+            message: "Telemetry processed",
         });
     }
-    const stat = await upsertAVStat(validation.data);
-    await syncScanAlert(stat);
-    await syncExpiryAlert(stat);
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+        });
+    }
 }

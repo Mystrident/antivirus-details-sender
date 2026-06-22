@@ -1,23 +1,27 @@
-console.log("loaded scheduler");
-import schedule from "node-schedule";
-import { sendFridayTelemetry } from "../services/friday-telemetry.service.js";
-import { collectTelemetry } from "../services/telemetry.service.js";
-import { sendTelemetry } from "../transport/api.js";
+import schedule from 'node-schedule';
+import { sendFridayTelemetry } from '../services/friday-telemetry.service.js';
+import { collectTelemetry } from '../services/telemetry.service.js';
+import { sendTelemetry } from '../transport/api.js';
+import { logger } from '../logger.js';
+import { SCHEDULES } from '../config/constants.js';
 async function sendHeartbeat() {
     try {
         const payload = await collectTelemetry();
-        console.log("FULL PAYLOAD:", JSON.stringify(payload, null, 2));
+        logger.debug({
+            assetId: payload.assetId,
+            location: payload.location,
+        }, 'Telemetry collected');
         await sendTelemetry(payload);
-        console.log(`[${new Date().toISOString()}] heartbeat sent`);
+        logger.info('Heartbeat sent');
     }
     catch (error) {
-        console.error(error);
+        logger.error({ err: error }, 'Heartbeat failed');
     }
 }
 export function startScheduler() {
-    console.log("Friday scheduler started");
+    logger.info('Friday scheduler started');
     sendFridayTelemetry();
-    schedule.scheduleJob("0 * * * *", async () => {
+    schedule.scheduleJob(SCHEDULES.HOURLY, async () => {
         await sendFridayTelemetry();
     });
 }

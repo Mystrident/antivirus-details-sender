@@ -1,6 +1,7 @@
 import cron from "node-cron";
 
 import { prisma } from "../prisma.js";
+import { logger } from "../logger.js";
 
 export function startCleanupJob() {
   cron.schedule(
@@ -8,15 +9,15 @@ export function startCleanupJob() {
 
     async () => {
       try {
-        console.log("Cleaning alert tables...");
+        logger.info("Cleaning alert tables");
 
         await prisma.aVScanAlert.deleteMany();
 
         await prisma.aVExpiryAlert.deleteMany();
 
-        console.log("Alert tables cleared");
+        logger.info("Alert tables cleared");
       } catch (error) {
-        console.error("Cleanup failed", error);
+        logger.error({ error }, "Cleanup failed");
       }
     },
   );

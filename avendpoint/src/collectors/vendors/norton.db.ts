@@ -1,361 +1,163 @@
-import fs from "fs";
-import path from "path";
-import os from "os";
-import sqlite3 from "sqlite3";
-
-export interface NortonMetrics {
-  productName: string | null;
-  version: string | null;
-
-  enabled: boolean;
-
-  lastScan: string | null;
-
-  expiryDate: string | null;
-}
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import sqlite3 from 'sqlite3';
+import type { NortonMetrics } from '../../types/antivirus.js';
+import type { NortonRow } from '../../types/vendor-db.js';
+import { logger } from '../../logger.js';
+import { sortFilesByMtime, createTempFilePath, cleanupTempFile } from '../../utils/file-io.js';
+import { extractTimestampFromContent, extractAndParseDate } from '../../utils/data-extraction.js';
+import { querySqliteDb, getSqliteValue } from '../../utils/database.js';
+import { WINDOWS_PATHS, FILE_PATTERNS, DATABASE_FIELDS, EXTRACTION_PATTERNS, PRODUCT_STATE, TEMP_FILES } from '../../config/constants.js';
 
 function findNortonDb(): string | null {
-  const dir = "C:\\ProgramData\\Norton\\Antivirus\\o2"; // Define the directory path where the Norton database files are located. This is a specific path on Windows systems where Norton Antivirus stores its database files.
-
   try {
-    const dbFiles = fs
-      .readdirSync(dir)
-      .filter((f) => f.toLowerCase().endsWith(".db"))
+    const files = fs
+      .readdirSync(WINDOWS_PATHS.NORTON_DB)
+      .filter((f) => f.toLowerCase().endsWith(FILE_PATTERNS.DB_FILES))
       .map((f) => ({
-        fullPath: path.join(dir, f),
-        mtime: fs.statSync(path.join(dir, f)).mtimeMs,
+        fullPath: path.join(WINDOWS_PATHS.NORTON_DB, f),
+        mtime: fs.statSync(path.join(WINDOWS_PATHS.NORTON_DB, f)).mtimeMs,
       }))
       .sort((a, b) => b.mtime - a.mtime);
-    /*
-      Before diving into each line, notice how the methods (.readdirSync(), .filter(), .map(), .sort()) are chained together using dots (.). The output of one line becomes the input for the next line. This allows the code to process the data in a continuous pipeline.
 
-      Line-by-Line Breakdown
-1. const dbFiles = fs
-What it is: This declares a constant variable named dbFiles to store the final, sorted list of files.
-
-fs: This stands for File System, a built-in Node.js module used to interact with your computer's physical files and directories.
-
-2. .readdirSync(dir)
-What it does: "Read Directory Synchronously." It looks inside the folder path specified by your dir variable (in your case, that Norton folder).
-
-The output: It returns a simple array of strings containing the names of all files and folders inside that directory.
-
-Example output at this stage: ['file1.txt', 'cache.db', 'logs.log', 'history.db']
-
-3. .filter((f) => f.toLowerCase().endsWith(".db"))
-What it does: This filters the array to keep only the files you care about. It loops through every file name (f) and checks a condition.
-
-f.toLowerCase(): Converts the file name to lowercase so that .DB, .Db, and .db are all treated the same way.
-
-.endsWith(".db"): A JavaScript string method that returns true if the file name ends with those specific characters. If it returns false, that file is kicked out of the array.
-
-Example output at this stage: ['cache.db', 'history.db']
-
-4. .map((f) => ({
-What it does: The .map() method transforms the data. Instead of just having a list of raw string names, you are turning each filename (f) into a detailed JavaScript object {}.
-
-The opening parenthesis and curly brace ({ is JavaScript shorthand to immediately return an object from an arrow function.
-
-5. fullPath: path.join(dir, f),
-What it does: This creates a property inside your new object called fullPath.
-
-path.join(dir, f): This uses Node.js's built-in path module to cleanly glue the directory path and the filename together. For example, it turns "C:\\Norton" and "cache.db" into "C:\\Norton\\cache.db". It automatically handles messy slashes for you.
-
-6. mtime: fs.statSync(path.join(dir, f)).mtimeMs,
-What it does: This creates a second property inside your object called mtime (Modification Time).
-
-fs.statSync(...): This goes back to the file system to grab the physical metadata of the file (size, creation date, permissions, etc.).
-
-.mtimeMs: This extracts the exact millisecond timestamp of when the file was last modified or updated. It represents time as a large number (e.g., 1719050000000), which makes it incredibly easy to compare mathematically.
-
-7. }))
-What it is: This simply closes the object, the arrow function, and the .map() method from lines 4, 5, and 6.
-
-Example output at this stage: ```javascript
-[
-{ fullPath: "C:\...\cache.db", mtime: 1719050000000 },
-{ fullPath: "C:\...\history.db", mtime: 1719058000000 }
-]
-
-
-8. .sort((a, b) => b.mtime - a.mtime);
-What it does: This sorts the array of objects by their modification timestamps.
-
-How the math works: JavaScript's .sort() takes two items at a time (a and b). By subtracting a.mtime from b.mtime (b - a), it sorts the array in descending order (largest numbers first).
-
-The Result: The file that was modified most recently (the newest file with the biggest timestamp number) moves to the very top of the list (index 0).
-
-Summary of the Final Result
-When this code finishes executing, dbFiles will hold an array of objects that looks like this, perfectly organized from newest to oldest:
-
-JavaScript
-[
-  { 
-    fullPath: "C:\\ProgramData\\Norton\\Antivirus\\o2\\history.db", 
-    mtime: 1719058000000 // Newest file
-  },
-  { 
-    fullPath: "C:\\ProgramData\\Norton\\Antivirus\\o2\\cache.db", 
-    mtime: 1719050000000 // Older file
-  }
-]*/
-
-    return dbFiles.length > 0 ? dbFiles[0].fullPath : null;
+    return files.length > 0 ? files[0].fullPath : null;
   } catch (err) {
-    console.log("error is ", err);
+    logger.debug({ err }, 'Failed to find Norton database');
     return null;
   }
 }
 
 function getExpiryDate(): string | null {
-  const logDir = "C:\\ProgramData\\Norton\\Antivirus\\Log";
-
   try {
     const files = fs
-      .readdirSync(logDir)
+      .readdirSync(WINDOWS_PATHS.NORTON_LOG)
       .filter((f) => {
         const lower = f.toLowerCase();
-
-        return (
-          lower.startsWith("nortonui") &&
-          (lower.endsWith(".log") || lower.endsWith(".log.old"))
-        );
+        const startsWithUi = lower.startsWith(FILE_PATTERNS.NORTON_UI_LOG_PREFIX);
+        const hasLogExt = FILE_PATTERNS.LOG_FILES.some((ext) => lower.endsWith(ext));
+        return startsWithUi && hasLogExt;
       })
       .map((f) => ({
-        path: path.join(logDir, f),
-        mtime: fs.statSync(path.join(logDir, f)).mtimeMs,
+        path: path.join(WINDOWS_PATHS.NORTON_LOG, f),
+        mtime: fs.statSync(path.join(WINDOWS_PATHS.NORTON_LOG, f)).mtimeMs,
       }))
       .sort((a, b) => b.mtime - a.mtime);
 
-    // thus expiry date is stored in nortonui*.log.old files, we need to read them to get the expiry date. We will read them starting from the newest one until we find a valid expiry date or run out of files.
-
     for (const file of files) {
       try {
-        const tempFile = path.join(
-          // Create a temporary file path in the system's temporary directory. This is necessary because we might not have permission to read the original log file directly, or it might be locked by Norton while it's running. By copying it to a temp location, we can safely read its contents without interference.
-          os.tmpdir(),
-          `norton-log-${Date.now()}-${Math.random().toString(36).slice(2)}.log`,
-        );
-
-        try {
-          fs.copyFileSync(file.path, tempFile);
-        } catch (e) {
-          console.log("error is : ", e);
-          continue;
-        }
-
-        const content = fs.readFileSync(tempFile, "utf8");
-
-        try {
-          fs.unlinkSync(tempFile);
-        } catch {}
-
-        const matches = [
-          ...content.matchAll(/"licExpirationTime"\s*:\s*(\d+)/gi),
-        ];
+        const content = fs.readFileSync(file.path, 'utf8');
+        const matches = [...content.matchAll(EXTRACTION_PATTERNS.NORTON_LICENSE_EXPIRY)];
 
         if (matches.length === 0) {
           continue;
         }
 
         const latestMatch = matches[matches.length - 1];
-
-        console.log("latestmatch is : ", latestMatch);
-
         const unixSeconds = Number(latestMatch[1]);
 
         if (Number.isNaN(unixSeconds) || unixSeconds <= 0) {
-          console.log("norton license expired (licExpirationTime=0)");
-          return "EXPIRED";
+          logger.debug('Norton license expired (licExpirationTime=0)');
+          return PRODUCT_STATE.LICENSE_EXPIRED;
         }
 
-        console.log("NORTON EXPIRY TIMESTAMP:", unixSeconds);
-
-        const expiryDate = new Date(unixSeconds * 1000).toISOString();
-
-        console.log("NORTON EXPIRY DATE:", expiryDate);
-
-        return expiryDate;
+        const expiryDate = extractAndParseDate(unixSeconds, true);
+        if (expiryDate) {
+          logger.debug({ expiryDate }, 'Norton expiry date found');
+          return expiryDate;
+        }
       } catch (err) {
-        console.error("Failed processing Norton log:", file.path, err);
+        logger.error({ err, filePath: file.path }, 'Failed processing Norton log');
       }
     }
   } catch (err) {
-    console.error("Failed accessing Norton log directory:", err);
+    logger.error({ err }, 'Failed accessing Norton log directory');
   }
 
   return null;
 }
 
 export async function getNortonMetrics(): Promise<NortonMetrics> {
-  console.log("entered norton metrics ");
-  console.log("=========");
+  logger.debug('Fetching Norton metrics');
+
   const sourceDb = findNortonDb();
-
-  console.log("source db found: ", sourceDb);
-
   if (!sourceDb) {
-    console.log("no source db found");
+    logger.debug('No Norton database found');
     return emptyMetrics();
   }
 
-  const tempDb = path.join(
-    os.tmpdir(),
-    `norton-${Date.now()}-${Math.random().toString(36).slice(2)}.db`,
-  );
+  const tempDb = createTempFilePath(TEMP_FILES.NORTON_DB_PREFIX, TEMP_FILES.EXTENSION_DB);
 
   try {
     fs.copyFileSync(sourceDb, tempDb);
   } catch (e) {
-    console.log("error is : ", e);
+    logger.error({ err: e }, `Failed to copy Norton database from ${sourceDb}`);
     return emptyMetrics();
   }
 
   const expiryDate = getExpiryDate();
 
-  console.log("NORTON EXPIRY DATE: ", expiryDate);
-
-  return new Promise((resolve) => {
-    const db = new sqlite3.Database(
+  try {
+    const rows = await querySqliteDb<NortonRow>(
       tempDb,
-      sqlite3.OPEN_READONLY,
-      (openErr) => {
-        if (openErr) {
-          try {
-            fs.unlinkSync(tempDb);
-          } catch (e) {
-            console.log("error is : ", e);
-          }
-
-          resolve({
-            ...emptyMetrics(),
-            expiryDate,
-          });
-        }
-      },
+      `SELECT ${DATABASE_FIELDS.NORTON.COLUMNS.name}, ${DATABASE_FIELDS.NORTON.COLUMNS.value}
+       FROM ${DATABASE_FIELDS.NORTON.TABLE_NODE_VALUES}`,
     );
 
-    db.all(
-      `
-  SELECT name, value
-  FROM node_values
-  WHERE node_id IN (8, 9)
-  `,
-      [],
-      async (err, rows: any[]) => {
-        db.close(() => {
-          try {
-            fs.unlinkSync(tempDb);
-          } catch (e) {
-            console.log("error is : ", e);
-          }
-        });
+    if (!rows) {
+      logger.debug('No Norton database rows retrieved');
+      return { ...emptyMetrics(), expiryDate };
+    }
 
-        if (err) {
-          console.error("sql error: ", err);
-          resolve({
-            ...emptyMetrics(),
-            expiryDate,
-          });
-          return;
-        }
+    const values = new Map<string, string>();
+    for (const row of rows) {
+      values.set(String(row.name), row.value != null ? String(row.value) : '');
+    }
 
-        console.log("total rows : ", rows?.length);
-        if (rows?.length) {
-          console.log("first 20 rows: ");
-          console.table(rows.slice(0, 20));
-        }
-        const values = new Map<string, string>();
+    const state = values.get(DATABASE_FIELDS.NORTON.KEYS.state);
+    let lastScan: string | null = null;
 
-        for (const row of rows ?? []) {
-          console.log("row: ", row.node_id, row.name, row.value);
-          values.set(
-            String(row.name),
-            row.value != null ? String(row.value) : "",
-          );
-        }
+    try {
+      const tempLogDb = createTempFilePath(TEMP_FILES.NORTON_LOG_PREFIX, TEMP_FILES.EXTENSION_DB);
+      fs.copyFileSync(WINDOWS_PATHS.NORTON_LOG_DB, tempLogDb);
 
-        console.log("ROWS", rows);
-        console.log("VALUES: ", Object.fromEntries(values));
+      const scanRow = await getSqliteValue<any>(
+        tempLogDb,
+        `SELECT Started FROM ${DATABASE_FIELDS.NORTON.TABLE_SCAN}
+         WHERE Type = ${DATABASE_FIELDS.NORTON.SCAN_TYPE_FULL}
+         ORDER BY Id DESC LIMIT 1`,
+      );
 
-        const state = values.get("state");
+      if (scanRow?.Started) {
+        lastScan = extractAndParseDate(scanRow.Started, true);
+      }
 
-        let lastScan: string | null = null;
+      await cleanupTempFile(tempLogDb);
+    } catch (e) {
+      logger.error({ err: e }, 'Failed reading Norton Log.db');
+    }
 
-        try {
-          const logDbPath = "C:\\ProgramData\\Norton\\Antivirus\\Log.db";
-
-          const tempLogDb = path.join(
-            os.tmpdir(),
-            `norton-log-${Date.now()}.db`,
-          );
-
-          fs.copyFileSync(logDbPath, tempLogDb);
-
-          lastScan = await new Promise<string | null>((resolveScan) => {
-            const scanDb = new sqlite3.Database(
-              tempLogDb,
-              sqlite3.OPEN_READONLY,
-            );
-
-            scanDb.get(
-              `
-          SELECT Started
-          FROM ScanSession
-          WHERE Type = 3
-          ORDER BY Id DESC
-          LIMIT 1
-          `,
-              [],
-              (scanErr, scanRow: any) => {
-                scanDb.close(() => {
-                  try {
-                    fs.unlinkSync(tempLogDb);
-                  } catch (e) {
-                    console.log("error is : ", e);
-                  }
-                });
-
-                if (scanErr || !scanRow || !scanRow.Started) {
-                  resolveScan(null);
-                  return;
-                }
-
-                resolveScan(
-                  new Date(Number(scanRow.Started) * 1000).toISOString(),
-                );
-              },
-            );
-          });
-        } catch (e) {
-          console.error("Failed reading Log.db", e);
-        }
-
-        resolve({
-          productName: values.get("prodName") ?? null,
-
-          version: values.get("prodVersion") ?? null,
-
-          enabled: state === "GOOD" || state === "ACTIVE",
-
-          lastScan,
-
-          expiryDate,
-        });
-      },
-    );
-  });
+    return {
+      productName: values.get(DATABASE_FIELDS.NORTON.KEYS.productName) ?? null,
+      version: values.get(DATABASE_FIELDS.NORTON.KEYS.version) ?? null,
+      enabled: DATABASE_FIELDS.NORTON.STATES.enabled.includes(state || ''),
+      lastScan,
+      expiryDate,
+    };
+  } catch (error) {
+    logger.error({ err: error }, 'Failed querying Norton database');
+    return { ...emptyMetrics(), expiryDate };
+  } finally {
+    await cleanupTempFile(tempDb);
+  }
 }
 
 function emptyMetrics(): NortonMetrics {
   return {
     productName: null,
     version: null,
-
     enabled: false,
-
     lastScan: null,
-
-    expiryDate: getExpiryDate(),
+    expiryDate: null,
   };
 }

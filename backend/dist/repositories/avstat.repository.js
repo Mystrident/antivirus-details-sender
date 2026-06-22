@@ -10,6 +10,9 @@ function parseDate(value) {
     return date;
 }
 export async function upsertAVStat(payload) {
+    if (!payload.macAddress) {
+        throw new Error("Missing MAC address");
+    }
     return prisma.aVStatRepo.upsert({
         where: {
             location_assetId: {

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import dotenv from "dotenv";
+import { logger } from "../logger.js";
 
 dotenv.config();
 
@@ -9,7 +10,7 @@ export async function sendAlertMail(
   scanCsvPath: string,
   expiryCsvPath: string,
 ) {
-  console.log("Sending email...");
+  logger.info("Sending weekly antivirus report");
 
   const result = await resend.emails.send({
     from: "onboarding@resend.dev",
@@ -37,5 +38,5 @@ export async function sendAlertMail(
     ],
   });
 
-  console.log(result);
+  logger.info({ result }, "Email sent");
 }

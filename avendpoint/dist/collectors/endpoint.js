@@ -16,6 +16,10 @@ export function getMacAddress() {
     return candidates[0] ?? null;
 }
 export async function getEndpointMetadata() {
+    const macAddress = getMacAddress();
+    if (!macAddress) {
+        throw new Error("Unable to determine MAC address");
+    }
     return {
         hostname: os.hostname(),
         osName: `${os.platform()} ${os.release()}`,

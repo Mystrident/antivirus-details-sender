@@ -1,19 +1,14 @@
-console.log("generic collector");
+import type { AntivirusInfo } from '../../types/antivirus.js';
+import { AntivirusProduct } from '../../types/antivirus.js';
+import { createAntivirusPayload } from '../../utils/telemetry-helpers.js';
+import { PRODUCT_STATE } from '../../config/constants.js';
 
-import type { TelemetryPayload } from "../../types/telemetry.js";
-
-export async function collectGenericAntivirus(
-  product: any,
-): Promise<TelemetryPayload["antivirus"]> {
-  return {
+export async function collectGenericAntivirus(product: AntivirusProduct): Promise<AntivirusInfo> {
+  return createAntivirusPayload({
     productName: product.displayName,
-
     version: null,
-
-    enabled: product.productState !== 0,
-
+    enabled: product.productState !== PRODUCT_STATE.DISABLED,
     lastScan: null,
-
     expiryDate: null,
-  };
+  });
 }

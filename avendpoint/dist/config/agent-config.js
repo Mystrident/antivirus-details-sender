@@ -1,11 +1,11 @@
-import fs from "fs";
-const CONFIG_PATH = "C:\\ProgramData\\EndpointAgent\\config.json";
+import fs from 'fs';
+import { WINDOWS_PATHS } from './constants.js';
 export function getAgentConfig() {
-    if (!fs.existsSync(CONFIG_PATH)) {
-        throw new Error(`Missing config file: ${CONFIG_PATH}`);
+    if (!fs.existsSync(WINDOWS_PATHS.CONFIG)) {
+        throw new Error(`Missing config file: ${WINDOWS_PATHS.CONFIG}`);
     }
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    return JSON.parse(fs.readFileSync(WINDOWS_PATHS.CONFIG, 'utf8'));
 }
 export function saveAgentConfig(config) {
-    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+    fs.writeFileSync(WINDOWS_PATHS.CONFIG, JSON.stringify(config, null, 2));
 }

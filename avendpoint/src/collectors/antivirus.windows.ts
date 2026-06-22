@@ -1,18 +1,16 @@
-import type { TelemetryPayload } from "../types/telemetry.js";
-import fs from "fs";
+import type { AntivirusInfo } from '../types/antivirus.js';
+import type { AntivirusProduct } from '../types/antivirus.js';
+import fs from 'fs';
+import { logger } from '../logger.js';
 
-import { collectMcAfee } from "./vendors/mcafee.collector.js";
-import { collectNorton } from "./vendors/norton.collector.js";
-import { collectGenericAntivirus } from "./vendors/generic.collector.js";
-
-interface AntivirusProduct {
-  displayName: string;
-  productState: number;
-}
+import { collectMcAfee } from './vendors/mcafee.collector.js';
+import { collectNorton } from './vendors/norton.collector.js';
+import { collectGenericAntivirus } from './vendors/generic.collector.js';
+import { WINDOWS_PATHS, PRODUCT_STATE } from '../config/constants.js';
 
 function isMcAfeeInstalled(): boolean {
   try {
-    return fs.existsSync("C:\\ProgramData\\McAfee\\wps");
+    return fs.existsSync(WINDOWS_PATHS.MCAFEE_DIR);
   } catch {
     return false;
   }
@@ -20,20 +18,18 @@ function isMcAfeeInstalled(): boolean {
 
 function isNortonInstalled(): boolean {
   try {
-    return fs.existsSync("C:\\ProgramData\\Norton\\Antivirus");
+    return fs.existsSync(WINDOWS_PATHS.NORTON_DIR);
   } catch {
     return false;
   }
 }
 
-export async function getWindowsAntivirusInfo(): Promise<
-  TelemetryPayload["antivirus"]
-> {
+export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
   try {
     if (isMcAfeeInstalled()) {
       const antivirus: AntivirusProduct = {
-        displayName: "McAfee",
-        productState: 1,
+        displayName: 'McAfee',
+        productState: PRODUCT_STATE.ENABLED,
       };
 
       return collectMcAfee(antivirus);
@@ -41,22 +37,22 @@ export async function getWindowsAntivirusInfo(): Promise<
 
     if (isNortonInstalled()) {
       const antivirus: AntivirusProduct = {
-        displayName: "Norton",
-        productState: 1,
+        displayName: 'Norton',
+        productState: PRODUCT_STATE.ENABLED,
       };
 
       return collectNorton(antivirus);
     }
 
     return collectGenericAntivirus({
-      displayName: "Unknown",
-      productState: 0,
+      displayName: 'Unknown',
+      productState: PRODUCT_STATE.DISABLED,
     });
   } catch (error) {
-    console.error("Failed to collect antivirus info:", error);
+    logger.error({ err: error }, 'Failed to collect antivirus info');
 
     return {
-      productName: "Unknown",
+      productName: 'Unknown',
       version: null,
       enabled: false,
       lastScan: null,

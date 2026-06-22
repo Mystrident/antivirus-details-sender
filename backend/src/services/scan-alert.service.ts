@@ -1,7 +1,14 @@
 import { prisma } from "../prisma.js";
 import { daysBetween } from "../utils/date.js";
 
-export async function syncScanAlert(stat: any) {
+interface AVStatRecord {
+  assetId: string;
+  location: string;
+  macAddress: string;
+  lastScanDate: Date | null;
+}
+
+export async function syncScanAlert(stat: AVStatRecord) {
   if (!stat.lastScanDate) {
     return;
   }

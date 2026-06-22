@@ -1,15 +1,19 @@
-import { TelemetryPayload } from "../../types/telemetry.js";
-import { getMcAfeeMetrics } from "./mcafee.db.js";
-import Registry from "winreg";
+import { logger } from '../../logger.js';
+import type { AntivirusInfo } from '../../types/antivirus.js';
+import { getMcAfeeMetrics } from './mcafee.db.js';
+import Registry from 'winreg';
+import { AntivirusProduct } from '../../types/antivirus.js';
+import { createAntivirusPayload } from '../../utils/telemetry-helpers.js';
+import { REGISTRY_KEYS } from '../../config/constants.js';
 
 function getMcAfeeVersion(): Promise<string | null> {
   return new Promise((resolve) => {
     const regKey = new Registry({
       hive: Registry.HKLM,
-      key: "\\SOFTWARE\\McAfee\\wps",
+      key: REGISTRY_KEYS.MCAFEE.key,
     });
 
-    regKey.get("Version", (err, item) => {
+    regKey.get(REGISTRY_KEYS.MCAFEE.value, (err, item) => {
       if (err || !item) {
         resolve(null);
       } else {
@@ -19,18 +23,17 @@ function getMcAfeeVersion(): Promise<string | null> {
   });
 }
 
-export async function collectMcAfee(
-  product: any,
-): Promise<TelemetryPayload["antivirus"]> {
+export async function collectMcAfee(product: AntivirusProduct): Promise<AntivirusInfo> {
   const version = await getMcAfeeVersion();
   const metrics = await getMcAfeeMetrics();
 
-  return {
+  logger.debug({ metrics }, 'McAfee metrics collected');
+
+  return createAntivirusPayload({
     productName: product.displayName,
     version,
     enabled: product.productState !== 0,
-
     lastScan: metrics.lastScan,
     expiryDate: metrics.expiryDate,
-  };
+  });
 }

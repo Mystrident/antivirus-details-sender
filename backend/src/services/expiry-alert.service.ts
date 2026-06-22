@@ -1,6 +1,13 @@
 import { prisma } from "../prisma.js";
 
-export async function syncExpiryAlert(stat: any) {
+interface AVStatRecord {
+  assetId: string;
+  location: string;
+  macAddress: string;
+  expiryDate: Date | null;
+}
+
+export async function syncExpiryAlert(stat: AVStatRecord) {
   if (!stat.expiryDate) {
     return;
   }

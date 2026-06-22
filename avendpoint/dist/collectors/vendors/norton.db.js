@@ -1,184 +1,136 @@
-console.log("norton db");
-import fs from "fs";
-import path from "path";
-import os from "os";
-import sqlite3 from "sqlite3";
-function emptyMetrics() {
-    return {
-        productName: null,
-        version: null,
-        enabled: false,
-        quarantineCount: 0,
-        lastScan: null,
-        expiryDate: null,
-    };
-}
+import fs from 'fs';
+import path from 'path';
+import { logger } from '../../logger.js';
+import { createTempFilePath, cleanupTempFile } from '../../utils/file-io.js';
+import { extractAndParseDate } from '../../utils/data-extraction.js';
+import { querySqliteDb, getSqliteValue } from '../../utils/database.js';
+import { WINDOWS_PATHS, FILE_PATTERNS, DATABASE_FIELDS, EXTRACTION_PATTERNS, PRODUCT_STATE, TEMP_FILES } from '../../config/constants.js';
 function findNortonDb() {
-    const dir = "C:\\ProgramData\\Norton\\Antivirus\\o2";
     try {
-        const dbFiles = fs
-            .readdirSync(dir)
-            .filter((f) => f.toLowerCase().endsWith(".db"))
+        const files = fs
+            .readdirSync(WINDOWS_PATHS.NORTON_DB)
+            .filter((f) => f.toLowerCase().endsWith(FILE_PATTERNS.DB_FILES))
             .map((f) => ({
-            fullPath: path.join(dir, f),
-            mtime: fs.statSync(path.join(dir, f)).mtimeMs,
+            fullPath: path.join(WINDOWS_PATHS.NORTON_DB, f),
+            mtime: fs.statSync(path.join(WINDOWS_PATHS.NORTON_DB, f)).mtimeMs,
         }))
             .sort((a, b) => b.mtime - a.mtime);
-        return dbFiles.length > 0 ? dbFiles[0].fullPath : null;
+        return files.length > 0 ? files[0].fullPath : null;
     }
-    catch {
+    catch (err) {
+        logger.debug({ err }, 'Failed to find Norton database');
         return null;
     }
 }
 function getExpiryDate() {
-    const logDir = "C:\\ProgramData\\Norton\\Antivirus\\Log";
     try {
         const files = fs
-            .readdirSync(logDir)
+            .readdirSync(WINDOWS_PATHS.NORTON_LOG)
             .filter((f) => {
             const lower = f.toLowerCase();
-            return (lower.startsWith("nortonui") &&
-                (lower.endsWith(".log") || lower.endsWith(".log.old")));
+            const startsWithUi = lower.startsWith(FILE_PATTERNS.NORTON_UI_LOG_PREFIX);
+            const hasLogExt = FILE_PATTERNS.LOG_FILES.some((ext) => lower.endsWith(ext));
+            return startsWithUi && hasLogExt;
         })
             .map((f) => ({
-            path: path.join(logDir, f),
-            mtime: fs.statSync(path.join(logDir, f)).mtimeMs,
+            path: path.join(WINDOWS_PATHS.NORTON_LOG, f),
+            mtime: fs.statSync(path.join(WINDOWS_PATHS.NORTON_LOG, f)).mtimeMs,
         }))
             .sort((a, b) => b.mtime - a.mtime);
         for (const file of files) {
             try {
-                const tempFile = path.join(os.tmpdir(), `norton-log-${Date.now()}-${Math.random()
-                    .toString(36)
-                    .slice(2)}.log`);
-                try {
-                    fs.copyFileSync(file.path, tempFile);
-                }
-                catch {
-                    continue;
-                }
-                const content = fs.readFileSync(tempFile, "utf8");
-                try {
-                    fs.unlinkSync(tempFile);
-                }
-                catch { }
-                const matches = [
-                    ...content.matchAll(/"licExpirationTime"\s*:\s*(\d+)/gi),
-                ];
+                const content = fs.readFileSync(file.path, 'utf8');
+                const matches = [...content.matchAll(EXTRACTION_PATTERNS.NORTON_LICENSE_EXPIRY)];
                 if (matches.length === 0) {
                     continue;
                 }
                 const latestMatch = matches[matches.length - 1];
                 const unixSeconds = Number(latestMatch[1]);
-                if (Number.isNaN(unixSeconds)) {
-                    continue;
+                if (Number.isNaN(unixSeconds) || unixSeconds <= 0) {
+                    logger.debug('Norton license expired (licExpirationTime=0)');
+                    return PRODUCT_STATE.LICENSE_EXPIRED;
                 }
-                console.log("NORTON EXPIRY TIMESTAMP:", unixSeconds);
-                const expiryDate = new Date(unixSeconds * 1000).toISOString();
-                console.log("NORTON EXPIRY DATE:", expiryDate);
-                return expiryDate;
+                const expiryDate = extractAndParseDate(unixSeconds, true);
+                if (expiryDate) {
+                    logger.debug({ expiryDate }, 'Norton expiry date found');
+                    return expiryDate;
+                }
             }
             catch (err) {
-                console.error("Failed processing Norton log:", file.path, err);
+                logger.error({ err, filePath: file.path }, 'Failed processing Norton log');
             }
         }
     }
     catch (err) {
-        console.error("Failed accessing Norton log directory:", err);
+        logger.error({ err }, 'Failed accessing Norton log directory');
     }
     return null;
 }
 export async function getNortonMetrics() {
+    logger.debug('Fetching Norton metrics');
     const sourceDb = findNortonDb();
     if (!sourceDb) {
+        logger.debug('No Norton database found');
         return emptyMetrics();
     }
-    const tempDb = path.join(os.tmpdir(), `norton-${Date.now()}-${Math.random().toString(36).slice(2)}.db`);
+    const tempDb = createTempFilePath(TEMP_FILES.NORTON_DB_PREFIX, TEMP_FILES.EXTENSION_DB);
     try {
         fs.copyFileSync(sourceDb, tempDb);
     }
-    catch {
+    catch (e) {
+        logger.error({ err: e }, `Failed to copy Norton database from ${sourceDb}`);
         return emptyMetrics();
     }
     const expiryDate = getExpiryDate();
-    console.log("NORTON EXPIRY DATE: ", expiryDate);
-    return new Promise((resolve) => {
-        const db = new sqlite3.Database(tempDb, sqlite3.OPEN_READONLY, (openErr) => {
-            if (openErr) {
-                try {
-                    fs.unlinkSync(tempDb);
-                }
-                catch { }
-                resolve({
-                    ...emptyMetrics(),
-                    expiryDate,
-                });
+    try {
+        const rows = await querySqliteDb(tempDb, `SELECT ${DATABASE_FIELDS.NORTON.COLUMNS.name}, ${DATABASE_FIELDS.NORTON.COLUMNS.value}
+       FROM ${DATABASE_FIELDS.NORTON.TABLE_NODE_VALUES}`);
+        if (!rows) {
+            logger.debug('No Norton database rows retrieved');
+            return { ...emptyMetrics(), expiryDate };
+        }
+        const values = new Map();
+        for (const row of rows) {
+            values.set(String(row.name), row.value != null ? String(row.value) : '');
+        }
+        const state = values.get(DATABASE_FIELDS.NORTON.KEYS.state);
+        let lastScan = null;
+        try {
+            const tempLogDb = createTempFilePath(TEMP_FILES.NORTON_LOG_PREFIX, TEMP_FILES.EXTENSION_DB);
+            fs.copyFileSync(WINDOWS_PATHS.NORTON_LOG_DB, tempLogDb);
+            const scanRow = await getSqliteValue(tempLogDb, `SELECT Started FROM ${DATABASE_FIELDS.NORTON.TABLE_SCAN}
+         WHERE Type = ${DATABASE_FIELDS.NORTON.SCAN_TYPE_FULL}
+         ORDER BY Id DESC LIMIT 1`);
+            if (scanRow?.Started) {
+                lastScan = extractAndParseDate(scanRow.Started, true);
             }
-        });
-        db.all(`
-  SELECT name, value
-  FROM node_values
-  WHERE node_id IN (8, 9)
-  `, [], async (err, rows) => {
-            db.close(() => {
-                try {
-                    fs.unlinkSync(tempDb);
-                }
-                catch { }
-            });
-            if (err) {
-                resolve({
-                    ...emptyMetrics(),
-                    expiryDate,
-                });
-                return;
-            }
-            const values = new Map();
-            for (const row of rows ?? []) {
-                values.set(String(row.name), row.value != null ? String(row.value) : "");
-            }
-            const state = values.get("state");
-            let lastScan = null;
-            try {
-                const logDbPath = "C:\\ProgramData\\Norton\\Antivirus\\Log.db";
-                const tempLogDb = path.join(os.tmpdir(), `norton-log-${Date.now()}.db`);
-                fs.copyFileSync(logDbPath, tempLogDb);
-                lastScan = await new Promise((resolveScan) => {
-                    const scanDb = new sqlite3.Database(tempLogDb, sqlite3.OPEN_READONLY);
-                    scanDb.get(`
-          SELECT Started
-          FROM ScanSession
-          WHERE Type = 3
-          ORDER BY Id DESC
-          LIMIT 1
-          `, [], (scanErr, scanRow) => {
-                        scanDb.close(() => {
-                            try {
-                                fs.unlinkSync(tempLogDb);
-                            }
-                            catch { }
-                        });
-                        if (scanErr ||
-                            !scanRow ||
-                            !scanRow.Started) {
-                            resolveScan(null);
-                            return;
-                        }
-                        resolveScan(new Date(Number(scanRow.Started) * 1000).toISOString());
-                    });
-                });
-            }
-            catch (e) {
-                console.error("Failed reading Log.db", e);
-            }
-            resolve({
-                productName: values.get("prodName") ?? null,
-                version: values.get("prodVersion") ?? null,
-                enabled: state === "GOOD" ||
-                    state === "ACTIVE",
-                quarantineCount: 0,
-                lastScan,
-                expiryDate,
-            });
-        });
-    });
+            await cleanupTempFile(tempLogDb);
+        }
+        catch (e) {
+            logger.error({ err: e }, 'Failed reading Norton Log.db');
+        }
+        return {
+            productName: values.get(DATABASE_FIELDS.NORTON.KEYS.productName) ?? null,
+            version: values.get(DATABASE_FIELDS.NORTON.KEYS.version) ?? null,
+            enabled: DATABASE_FIELDS.NORTON.STATES.enabled.includes(state || ''),
+            lastScan,
+            expiryDate,
+        };
+    }
+    catch (error) {
+        logger.error({ err: error }, 'Failed querying Norton database');
+        return { ...emptyMetrics(), expiryDate };
+    }
+    finally {
+        await cleanupTempFile(tempDb);
+    }
+}
+function emptyMetrics() {
+    return {
+        productName: null,
+        version: null,
+        enabled: false,
+        lastScan: null,
+        expiryDate: null,
+    };
 }

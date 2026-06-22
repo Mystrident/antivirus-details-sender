@@ -1,6 +1,15 @@
 import { createObjectCsvWriter } from "csv-writer";
 
-export async function createCsv(path: string, headers: any[], records: any[]) {
+interface CsvHeader {
+  id: string;
+  title: string;
+}
+
+export async function createCsv(
+  path: string,
+  headers: CsvHeader[],
+  records: Record<string, unknown>[],
+) {
   const writer = createObjectCsvWriter({
     path,
     header: headers,

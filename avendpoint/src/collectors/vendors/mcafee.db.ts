@@ -1,76 +1,47 @@
-console.log("mcafee db");
+import { logger } from '../../logger.js';
+import fs from 'fs';
+import path from 'path';
+import type { McAfeeMetrics } from '../../types/antivirus.js';
+import { sortFilesByMtime } from '../../utils/file-io.js';
+import { extractTimestampFromContent } from '../../utils/data-extraction.js';
+import { WINDOWS_PATHS, FILE_PATTERNS, EXTRACTION_PATTERNS } from '../../config/constants.js';
 
-import fs from "fs";
-import path from "path";
-
-export interface McAfeeMetrics {
-  lastScan: string | null;
-  expiryDate: string | null;
+async function getSortedEtlFiles(): Promise<string[]> {
+  return sortFilesByMtime(WINDOWS_PATHS.MCAFEE_LOG, FILE_PATTERNS.ETL_FILES).then((files) =>
+    files.filter((f) => path.basename(f).startsWith(FILE_PATTERNS.MCAFEE_ETL_PREFIX)),
+  );
 }
 
-function getSortedEtlFiles(): string[] {
-  const logDir = "C:\\ProgramData\\McAfee\\wps\\log";
-
-  try {
-    return fs
-      .readdirSync(logDir)
-      .filter((f) => f.startsWith("wps-") && f.endsWith(".etl"))
-      .map((f) => ({
-        path: path.join(logDir, f),
-        time: fs.statSync(path.join(logDir, f)).mtimeMs,
-      }))
-      .sort((a, b) => b.time - a.time)
-      .map((f) => f.path);
-  } catch {
-    return [];
-  }
-}
-
-function getMcAfeeLastScan(): string | null {
-  const files = getSortedEtlFiles();
-
+function getMcAfeeLastScan(files: string[]): string | null {
   for (const file of files) {
     try {
-      const content = fs.readFileSync(file, "utf8");
+      const content = fs.readFileSync(file, 'utf8');
+      const scanDate = extractTimestampFromContent(content, EXTRACTION_PATTERNS.MCAFEE_SCAN_TIMESTAMP);
 
-      const match = content.match(/Formatting timestamp:\s*(\d+)/);
-      if (match) {
-        const unixTimestamp = Number(match[1]);
-
-        const scanDate = new Date(unixTimestamp * 1000);
-
-        if (!isNaN(scanDate.getTime())) {
-          console.log("McAfee Last Scan:", scanDate.toISOString());
-
-          return scanDate.toISOString();
-        }
+      if (scanDate) {
+        logger.debug({ scanDate, file }, 'McAfee last scan found');
+        return scanDate;
       }
     } catch (err) {
-      console.error(err);
+      logger.error({ err, file }, 'Failed reading McAfee ETL file');
     }
   }
 
   return null;
 }
 
-function getMcAfeeExpiryDate(): string | null {
-  const files = getSortedEtlFiles();
-
+function getMcAfeeExpiryDate(files: string[]): string | null {
   for (const file of files) {
     try {
-      const content = fs.readFileSync(file, "utf8");
+      const content = fs.readFileSync(file, 'utf8');
+      const expiryDate = extractTimestampFromContent(content, EXTRACTION_PATTERNS.MCAFEE_EXPIRY_TIME);
 
-      const match = content.match(/"expiryTime":(\d+)/);
-
-      if (match) {
-        console.log(
-          "McAfee Expiry Date:",
-          new Date(Number(match[1])).toISOString(),
-        );
-        return new Date(Number(match[1])).toISOString();
+      if (expiryDate) {
+        logger.debug({ expiryDate, file }, 'McAfee expiry date found');
+        return expiryDate;
       }
     } catch (err) {
-      console.error(err);
+      logger.error({ err, file }, 'Failed reading McAfee ETL file');
     }
   }
 
@@ -78,8 +49,17 @@ function getMcAfeeExpiryDate(): string | null {
 }
 
 export async function getMcAfeeMetrics(): Promise<McAfeeMetrics> {
-  return {
-    lastScan: getMcAfeeLastScan(),
-    expiryDate: getMcAfeeExpiryDate(),
-  };
+  try {
+    const files = await getSortedEtlFiles();
+    return {
+      lastScan: getMcAfeeLastScan(files),
+      expiryDate: getMcAfeeExpiryDate(files),
+    };
+  } catch (error) {
+    logger.error({ err: error }, 'Failed retrieving McAfee metrics');
+    return {
+      lastScan: null,
+      expiryDate: null,
+    };
+  }
 }

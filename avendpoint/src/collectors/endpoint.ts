@@ -1,14 +1,5 @@
 import os from "os";
-
-export interface EndpointMetadata {
-  hostname: string;
-
-  osName: string;
-
-  macAddress: string | null;
-
-  username: string | null;
-}
+import type { EndpointMetadata } from "../types/endpoint.js";
 
 export function getMacAddress(): string | null {
   const interfaces = os.networkInterfaces();
@@ -33,6 +24,12 @@ export function getMacAddress(): string | null {
 }
 
 export async function getEndpointMetadata(): Promise<EndpointMetadata> {
+  const macAddress = getMacAddress();
+
+  if (!macAddress) {
+    throw new Error("Unable to determine MAC address");
+  }
+
   return {
     hostname: os.hostname(),
 

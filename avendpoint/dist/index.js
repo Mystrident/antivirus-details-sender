@@ -1,11 +1,39 @@
 import "dotenv/config";
 import { startScheduler, sendHeartbeat } from "./scheduler/scheduler.js";
-import { getAgentConfig } from "./config/agent-config.js";
+import { logger } from "./logger.js";
+import fs from "fs";
+setInterval(() => {
+    fs.writeFileSync("heartbeat.txt", Date.now().toString());
+}, 60000);
+process.on("uncaughtException", (error) => {
+    logger.fatal({ err: error }, "Uncaught exception");
+    process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+    logger.fatal({ err: reason }, "Unhandled promise rejection");
+    process.exit(1);
+});
 async function bootstrap() {
-    console.log("starting...");
-    await sendHeartbeat();
+    logger.info("Agent startup initiated");
+    try {
+        await sendHeartbeat();
+        logger.info("Initial heartbeat sent");
+    }
+    catch (error) {
+        logger.error({ err: error }, "Initial heartbeat failed");
+    }
     startScheduler();
-    console.log("Agent running");
+    logger.info("Agent started successfully");
 }
-bootstrap().catch(console.error);
-console.log(getAgentConfig());
+process.on("SIGTERM", async () => {
+    logger.info("SIGTERM received");
+    process.exit(0);
+});
+process.on("SIGINT", async () => {
+    logger.info("SIGINT received");
+    process.exit(0);
+});
+bootstrap().catch((error) => {
+    logger.fatal({ err: error }, "Bootstrap failed");
+    process.exit(1);
+});

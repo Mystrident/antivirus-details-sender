@@ -1,10 +1,11 @@
-console.log("generic collector");
+import { createAntivirusPayload } from '../../utils/telemetry-helpers.js';
+import { PRODUCT_STATE } from '../../config/constants.js';
 export async function collectGenericAntivirus(product) {
-    return {
+    return createAntivirusPayload({
         productName: product.displayName,
         version: null,
-        enabled: product.productState !== 0,
+        enabled: product.productState !== PRODUCT_STATE.DISABLED,
         lastScan: null,
         expiryDate: null,
-    };
+    });
 }
