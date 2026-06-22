@@ -1,17 +1,15 @@
 console.log("norton db");
 
-import fs from "fs";
-import path from "path";
-import os from "os";
-import sqlite3 from "sqlite3";
+import fs from "fs"; // Import the fs module to interact with the file system for reading and writing files, such as the Norton database and log files.
+import path from "path"; // Import the path module to handle and transform file paths, which is useful for constructing paths to the Norton database and log files in a cross-platform manner.
+import os from "os"; // Import the os module to access operating system-related utility methods and properties, such as getting the temporary directory for creating temporary files when processing Norton database and log files.
+import sqlite3 from "sqlite3"; // Import the sqlite3 module to interact with SQLite databases, which is used to read the Norton database and log files to extract relevant antivirus metrics such as product name, version, enabled status, last scan date, and expiry date.
 
 export interface NortonMetrics {
   productName: string | null;
   version: string | null;
 
   enabled: boolean;
-
-  quarantineCount: number;
 
   lastScan: string | null;
 
@@ -25,8 +23,6 @@ function emptyMetrics(): NortonMetrics {
 
     enabled: false,
 
-    quarantineCount: 0,
-
     lastScan: null,
 
     expiryDate: null,
@@ -34,7 +30,7 @@ function emptyMetrics(): NortonMetrics {
 }
 
 function findNortonDb(): string | null {
-  const dir = "C:\\ProgramData\\Norton\\Antivirus\\o2";
+  const dir = "C:\\ProgramData\\Norton\\Antivirus\\o2"; // Define the directory path where the Norton database files are located. This is a specific path on Windows systems where Norton Antivirus stores its database files.
 
   try {
     const dbFiles = fs
@@ -44,7 +40,79 @@ function findNortonDb(): string | null {
         fullPath: path.join(dir, f),
         mtime: fs.statSync(path.join(dir, f)).mtimeMs,
       }))
-      .sort((a, b) => b.mtime - a.mtime);
+      .sort((a, b) => b.mtime - a.mtime); /*
+      Before diving into each line, notice how the methods (.readdirSync(), .filter(), .map(), .sort()) are chained together using dots (.). The output of one line becomes the input for the next line. This allows the code to process the data in a continuous pipeline.
+
+Line-by-Line Breakdown
+1. const dbFiles = fs
+What it is: This declares a constant variable named dbFiles to store the final, sorted list of files.
+
+fs: This stands for File System, a built-in Node.js module used to interact with your computer's physical files and directories.
+
+2. .readdirSync(dir)
+What it does: "Read Directory Synchronously." It looks inside the folder path specified by your dir variable (in your case, that Norton folder).
+
+The output: It returns a simple array of strings containing the names of all files and folders inside that directory.
+
+Example output at this stage: ['file1.txt', 'cache.db', 'logs.log', 'history.db']
+
+3. .filter((f) => f.toLowerCase().endsWith(".db"))
+What it does: This filters the array to keep only the files you care about. It loops through every file name (f) and checks a condition.
+
+f.toLowerCase(): Converts the file name to lowercase so that .DB, .Db, and .db are all treated the same way.
+
+.endsWith(".db"): A JavaScript string method that returns true if the file name ends with those specific characters. If it returns false, that file is kicked out of the array.
+
+Example output at this stage: ['cache.db', 'history.db']
+
+4. .map((f) => ({
+What it does: The .map() method transforms the data. Instead of just having a list of raw string names, you are turning each filename (f) into a detailed JavaScript object {}.
+
+The opening parenthesis and curly brace ({ is JavaScript shorthand to immediately return an object from an arrow function.
+
+5. fullPath: path.join(dir, f),
+What it does: This creates a property inside your new object called fullPath.
+
+path.join(dir, f): This uses Node.js's built-in path module to cleanly glue the directory path and the filename together. For example, it turns "C:\\Norton" and "cache.db" into "C:\\Norton\\cache.db". It automatically handles messy slashes for you.
+
+6. mtime: fs.statSync(path.join(dir, f)).mtimeMs,
+What it does: This creates a second property inside your object called mtime (Modification Time).
+
+fs.statSync(...): This goes back to the file system to grab the physical metadata of the file (size, creation date, permissions, etc.).
+
+.mtimeMs: This extracts the exact millisecond timestamp of when the file was last modified or updated. It represents time as a large number (e.g., 1719050000000), which makes it incredibly easy to compare mathematically.
+
+7. }))
+What it is: This simply closes the object, the arrow function, and the .map() method from lines 4, 5, and 6.
+
+Example output at this stage: ```javascript
+[
+{ fullPath: "C:\...\cache.db", mtime: 1719050000000 },
+{ fullPath: "C:\...\history.db", mtime: 1719058000000 }
+]
+
+
+8. .sort((a, b) => b.mtime - a.mtime);
+What it does: This sorts the array of objects by their modification timestamps.
+
+How the math works: JavaScript's .sort() takes two items at a time (a and b). By subtracting a.mtime from b.mtime (b - a), it sorts the array in descending order (largest numbers first).
+
+The Result: The file that was modified most recently (the newest file with the biggest timestamp number) moves to the very top of the list (index 0).
+
+Summary of the Final Result
+When this code finishes executing, dbFiles will hold an array of objects that looks like this, perfectly organized from newest to oldest:
+
+JavaScript
+[
+  { 
+    fullPath: "C:\\ProgramData\\Norton\\Antivirus\\o2\\history.db", 
+    mtime: 1719058000000 // Newest file
+  },
+  { 
+    fullPath: "C:\\ProgramData\\Norton\\Antivirus\\o2\\cache.db", 
+    mtime: 1719050000000 // Older file
+  }
+]*/
 
     return dbFiles.length > 0 ? dbFiles[0].fullPath : null;
   } catch {
@@ -76,9 +144,7 @@ function getExpiryDate(): string | null {
       try {
         const tempFile = path.join(
           os.tmpdir(),
-          `norton-log-${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2)}.log`,
+          `norton-log-${Date.now()}-${Math.random().toString(36).slice(2)}.log`,
         );
 
         try {
@@ -94,9 +160,7 @@ function getExpiryDate(): string | null {
         } catch {}
 
         const matches = [
-          ...content.matchAll(
-            /"licExpirationTime"\s*:\s*(\d+)/gi,
-          ),
+          ...content.matchAll(/"licExpirationTime"\s*:\s*(\d+)/gi),
         ];
 
         if (matches.length === 0) {
@@ -111,34 +175,19 @@ function getExpiryDate(): string | null {
           continue;
         }
 
-        console.log(
-          "NORTON EXPIRY TIMESTAMP:",
-          unixSeconds,
-        );
+        console.log("NORTON EXPIRY TIMESTAMP:", unixSeconds);
 
-        const expiryDate = new Date(
-          unixSeconds * 1000,
-        ).toISOString();
+        const expiryDate = new Date(unixSeconds * 1000).toISOString();
 
-        console.log(
-          "NORTON EXPIRY DATE:",
-          expiryDate,
-        );
+        console.log("NORTON EXPIRY DATE:", expiryDate);
 
         return expiryDate;
       } catch (err) {
-        console.error(
-          "Failed processing Norton log:",
-          file.path,
-          err,
-        );
+        console.error("Failed processing Norton log:", file.path, err);
       }
     }
   } catch (err) {
-    console.error(
-      "Failed accessing Norton log directory:",
-      err,
-    );
+    console.error("Failed accessing Norton log directory:", err);
   }
 
   return null;
@@ -146,7 +195,6 @@ function getExpiryDate(): string | null {
 
 export async function getNortonMetrics(): Promise<NortonMetrics> {
   const sourceDb = findNortonDb();
-  
 
   if (!sourceDb) {
     return emptyMetrics();
@@ -164,9 +212,7 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
   }
 
   const expiryDate = getExpiryDate();
-  console.log("NORTON EXPIRY DATE: ",expiryDate);
-
-  
+  console.log("NORTON EXPIRY DATE: ", expiryDate);
 
   return new Promise((resolve) => {
     const db = new sqlite3.Database(
@@ -187,114 +233,99 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
     );
 
     db.all(
-  `
+      `
   SELECT name, value
   FROM node_values
   WHERE node_id IN (8, 9)
   `,
-  [],
-  async (err, rows: any[]) => {
-    db.close(() => {
-      try {
-        fs.unlinkSync(tempDb);
-      } catch {}
-    });
+      [],
+      async (err, rows: any[]) => {
+        db.close(() => {
+          try {
+            fs.unlinkSync(tempDb);
+          } catch {}
+        });
 
-    if (err) {
-      resolve({
-        ...emptyMetrics(),
-        expiryDate,
-      });
-      return;
-    }
+        if (err) {
+          resolve({
+            ...emptyMetrics(),
+            expiryDate,
+          });
+          return;
+        }
 
-    const values = new Map<string, string>();
+        const values = new Map<string, string>();
 
-    for (const row of rows ?? []) {
-      values.set(
-        String(row.name),
-        row.value != null ? String(row.value) : "",
-      );
-    }
+        for (const row of rows ?? []) {
+          values.set(
+            String(row.name),
+            row.value != null ? String(row.value) : "",
+          );
+        }
 
-    const state = values.get("state");
+        const state = values.get("state");
 
-    let lastScan: string | null = null;
+        let lastScan: string | null = null;
 
-    try {
-      const logDbPath =
-        "C:\\ProgramData\\Norton\\Antivirus\\Log.db";
+        try {
+          const logDbPath = "C:\\ProgramData\\Norton\\Antivirus\\Log.db";
 
-      const tempLogDb = path.join(
-        os.tmpdir(),
-        `norton-log-${Date.now()}.db`,
-      );
+          const tempLogDb = path.join(
+            os.tmpdir(),
+            `norton-log-${Date.now()}.db`,
+          );
 
-      fs.copyFileSync(logDbPath, tempLogDb);
+          fs.copyFileSync(logDbPath, tempLogDb);
 
-      lastScan = await new Promise<string | null>((resolveScan) => {
-        const scanDb = new sqlite3.Database(
-          tempLogDb,
-          sqlite3.OPEN_READONLY,
-        );
+          lastScan = await new Promise<string | null>((resolveScan) => {
+            const scanDb = new sqlite3.Database(
+              tempLogDb,
+              sqlite3.OPEN_READONLY,
+            );
 
-        scanDb.get(
-          `
+            scanDb.get(
+              `
           SELECT Started
           FROM ScanSession
           WHERE Type = 3
           ORDER BY Id DESC
           LIMIT 1
           `,
-          [],
-          (scanErr, scanRow: any) => {
-            scanDb.close(() => {
-              try {
-                fs.unlinkSync(tempLogDb);
-              } catch {}
-            });
+              [],
+              (scanErr, scanRow: any) => {
+                scanDb.close(() => {
+                  try {
+                    fs.unlinkSync(tempLogDb);
+                  } catch {}
+                });
 
-            if (
-              scanErr ||
-              !scanRow ||
-              !scanRow.Started
-            ) {
-              resolveScan(null);
-              return;
-            }
+                if (scanErr || !scanRow || !scanRow.Started) {
+                  resolveScan(null);
+                  return;
+                }
 
-            resolveScan(
-              new Date(
-                Number(scanRow.Started) * 1000,
-              ).toISOString(),
+                resolveScan(
+                  new Date(Number(scanRow.Started) * 1000).toISOString(),
+                );
+              },
             );
-          },
-        );
-      });
-    } catch (e) {
-      console.error("Failed reading Log.db", e);
-    }
+          });
+        } catch (e) {
+          console.error("Failed reading Log.db", e);
+        }
 
-    resolve({
-      productName:
-        values.get("prodName") ?? null,
+        resolve({
+          productName: values.get("prodName") ?? null,
 
-      version:
-        values.get("prodVersion") ?? null,
+          version: values.get("prodVersion") ?? null,
 
-      enabled:
-        state === "GOOD" ||
-        state === "ACTIVE",
+          enabled: state === "GOOD" || state === "ACTIVE",
 
-      quarantineCount: 0,
+          lastScan,
 
-      lastScan,
-
-      expiryDate,
-
-      
-    });
-  },
-);
+          expiryDate,
+        });
+      },
+    );
   });
 }
