@@ -1,8 +1,8 @@
-import { logger } from '../../logger.js';
-import { getMcAfeeMetrics } from './mcafee.db.js';
-import Registry from 'winreg';
-import { createAntivirusPayload } from '../../utils/telemetry-helpers.js';
-import { REGISTRY_KEYS } from '../../config/constants.js';
+import { logger } from "../../logger.js";
+import { getMcAfeeMetrics } from "./mcafee.db.js";
+import Registry from "winreg";
+import { createAntivirusPayload } from "../../utils/telemetry-helpers.js";
+import { REGISTRY_KEYS } from "../../config/constants.js";
 function getMcAfeeVersion() {
     return new Promise((resolve) => {
         const regKey = new Registry({
@@ -22,7 +22,8 @@ function getMcAfeeVersion() {
 export async function collectMcAfee(product) {
     const version = await getMcAfeeVersion();
     const metrics = await getMcAfeeMetrics();
-    logger.debug({ metrics }, 'McAfee metrics collected');
+    logger.debug({ metrics }, "McAfee metrics collected");
+    logger.info({ metrics }, "McAfee metrics collected");
     return createAntivirusPayload({
         productName: product.displayName,
         version,

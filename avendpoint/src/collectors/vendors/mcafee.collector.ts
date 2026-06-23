@@ -1,10 +1,10 @@
-import { logger } from '../../logger.js';
-import type { AntivirusInfo } from '../../types/antivirus.js';
-import { getMcAfeeMetrics } from './mcafee.db.js';
-import Registry from 'winreg';
-import { AntivirusProduct } from '../../types/antivirus.js';
-import { createAntivirusPayload } from '../../utils/telemetry-helpers.js';
-import { REGISTRY_KEYS } from '../../config/constants.js';
+import { logger } from "../../logger.js";
+import type { AntivirusInfo } from "../../types/antivirus.js";
+import { getMcAfeeMetrics } from "./mcafee.db.js";
+import Registry from "winreg";
+import { AntivirusProduct } from "../../types/antivirus.js";
+import { createAntivirusPayload } from "../../utils/telemetry-helpers.js";
+import { REGISTRY_KEYS } from "../../config/constants.js";
 
 function getMcAfeeVersion(): Promise<string | null> {
   return new Promise((resolve) => {
@@ -23,11 +23,14 @@ function getMcAfeeVersion(): Promise<string | null> {
   });
 }
 
-export async function collectMcAfee(product: AntivirusProduct): Promise<AntivirusInfo> {
+export async function collectMcAfee(
+  product: AntivirusProduct,
+): Promise<AntivirusInfo> {
   const version = await getMcAfeeVersion();
   const metrics = await getMcAfeeMetrics();
 
-  logger.debug({ metrics }, 'McAfee metrics collected');
+  logger.debug({ metrics }, "McAfee metrics collected");
+  logger.info({ metrics }, "McAfee metrics collected");
 
   return createAntivirusPayload({
     productName: product.displayName,
