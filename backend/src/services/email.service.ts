@@ -13,13 +13,13 @@ export async function sendAlertMail(
   try {
     logger.info("Creating transporter");
 
-    logger.info(
-      {
-        from: process.env.DEFAULT_FROM_EMAIL,
-        to: process.env.ADMIN_EMAIL,
-      },
-      "Calling sendMail",
-    );
+    logger.info("Verifying SMTP");
+
+    await transporter.verify();
+
+    logger.info("SMTP verified");
+
+    logger.info("Calling sendMail");
 
     const result = await transporter.sendMail({
       from: process.env.DEFAULT_FROM_EMAIL,
