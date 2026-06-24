@@ -1,7 +1,7 @@
 using System;
 using System.Drawing;
-using System.Windows.Forms;
 using System.Timers;
+using System.Windows.Forms;
 
 namespace EndpointTrayManager
 {
@@ -17,7 +17,7 @@ namespace EndpointTrayManager
         {
             InitializeComponent();
             this.ShowInTaskbar = false;
-            this.WindowState = FormWindowState.Hidden;
+            this.WindowState = FormWindowState.Minimized;
             this.FormBorderStyle = FormBorderStyle.None;
             this.Size = new Size(0, 0);
 
@@ -79,44 +79,50 @@ namespace EndpointTrayManager
 
         private void UpdateServiceStatus()
         {
-            this.Invoke((MethodInvoker)delegate
-            {
-                try
-                {
-                    string statusJson = _pipeClient.SendCommand("GET_STATUS");
-                    _isRunning = statusJson.Contains("\"status\":\"RUNNING\"");
+            if (!IsHandleCreated)
+                return;
 
-                    // Update context menu
-                    foreach (ToolStripItem item in _contextMenu.Items)
+            this.Invoke(
+                (MethodInvoker)
+                    delegate
                     {
-                        if (item.Name == "StatusLabel")
+                        try
                         {
-                            item.Text = _isRunning ? "Status: Running" : "Status: Stopped";
+                            string statusJson = _pipeClient.SendCommand("GET_STATUS");
+                            _isRunning = statusJson.Contains("\"status\":\"RUNNING\"");
+
+                            // Update context menu
+                            foreach (ToolStripItem item in _contextMenu.Items)
+                            {
+                                if (item.Name == "StatusLabel")
+                                {
+                                    item.Text = _isRunning ? "Status: Running" : "Status: Stopped";
+                                }
+                                else if (item.Name == "StartItem")
+                                {
+                                    item.Enabled = !_isRunning;
+                                }
+                                else if (item.Name == "StopItem")
+                                {
+                                    item.Enabled = _isRunning;
+                                }
+                            }
+
+                            UpdateTrayIcon();
                         }
-                        else if (item.Name == "StartItem")
+                        catch (Exception ex)
                         {
-                            item.Enabled = !_isRunning;
-                        }
-                        else if (item.Name == "StopItem")
-                        {
-                            item.Enabled = _isRunning;
+                            foreach (ToolStripItem item in _contextMenu.Items)
+                            {
+                                if (item.Name == "StatusLabel")
+                                {
+                                    item.Text = "Status: Error";
+                                }
+                            }
+                            _trayIcon.Icon = SystemIcons.Warning;
                         }
                     }
-
-                    UpdateTrayIcon();
-                }
-                catch (Exception ex)
-                {
-                    foreach (ToolStripItem item in _contextMenu.Items)
-                    {
-                        if (item.Name == "StatusLabel")
-                        {
-                            item.Text = "Status: Error";
-                        }
-                    }
-                    _trayIcon.Icon = SystemIcons.Warning;
-                }
-            });
+            );
         }
 
         private void UpdateTrayIcon()
@@ -154,17 +160,32 @@ namespace EndpointTrayManager
                 string response = _pipeClient.SendCommand("START_AGENT");
                 if (response.Contains("SUCCESS"))
                 {
-                    MessageBox.Show("Agent started successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "Agent started successfully.",
+                        "Success",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
                     UpdateServiceStatus();
                 }
                 else
                 {
-                    MessageBox.Show("Failed to start agent.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(
+                        "Failed to start agent.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    $"Error: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
@@ -175,17 +196,32 @@ namespace EndpointTrayManager
                 string response = _pipeClient.SendCommand("STOP_AGENT");
                 if (response.Contains("SUCCESS"))
                 {
-                    MessageBox.Show("Agent stopped successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "Agent stopped successfully.",
+                        "Success",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    );
                     UpdateServiceStatus();
                 }
                 else
                 {
-                    MessageBox.Show("Failed to stop agent.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(
+                        "Failed to stop agent.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(
+                    $"Error: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 
@@ -194,7 +230,7 @@ namespace EndpointTrayManager
             if (this.Visible)
             {
                 this.Hide();
-                this.WindowState = FormWindowState.Hidden;
+                this.WindowState = FormWindowState.Minimized;
             }
             else
             {
@@ -216,7 +252,7 @@ namespace EndpointTrayManager
             {
                 e.Cancel = true;
                 this.Hide();
-                this.WindowState = FormWindowState.Hidden;
+                this.WindowState = FormWindowState.Minimized;
             }
             base.OnFormClosing(e);
         }

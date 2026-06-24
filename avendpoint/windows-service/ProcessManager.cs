@@ -74,7 +74,8 @@ namespace EndpointAgentService
                 {
                     _eventLog.WriteEntry(
                         "Heartbeat file contained invalid data.",
-                        EventLogEntryType.Warning);
+                        EventLogEntryType.Warning
+                    );
                     return false;
                 }
 
@@ -85,7 +86,8 @@ namespace EndpointAgentService
             {
                 _eventLog.WriteEntry(
                     $"Health check failed: {ex.Message}",
-                    EventLogEntryType.Warning);
+                    EventLogEntryType.Warning
+                );
                 return false;
             }
         }
@@ -104,24 +106,31 @@ namespace EndpointAgentService
             {
                 if (IsRunning)
                 {
-                    _eventLog.WriteEntry("Node.js process is already running.", EventLogEntryType.Information);
+                    _eventLog.WriteEntry(
+                        "Node.js process is already running.",
+                        EventLogEntryType.Information
+                    );
                     return;
                 }
 
                 try
                 {
                     if (!File.Exists(_nodeExePath))
-                        throw new FileNotFoundException($"Node executable not found: {_nodeExePath}");
+                        throw new FileNotFoundException(
+                            $"Node executable not found: {_nodeExePath}"
+                        );
 
                     if (!Directory.Exists(_nodeAppPath))
-                        throw new DirectoryNotFoundException($"App directory not found: {_nodeAppPath}");
+                        throw new DirectoryNotFoundException(
+                            $"App directory not found: {_nodeAppPath}"
+                        );
 
                     KillExistingProcess();
 
                     ProcessStartInfo psi = new ProcessStartInfo
                     {
                         FileName = _nodeExePath,
-                        Arguments = "index.js",
+                        Arguments = "dist/index.js",
                         WorkingDirectory = _nodeAppPath,
                         UseShellExecute = false,
                         RedirectStandardOutput = true,
@@ -135,16 +144,31 @@ namespace EndpointAgentService
                     _nodeProcess.ErrorDataReceived += (s, e) => LogProcessError(e.Data);
 
                     _nodeProcess.Start();
+                    _eventLog.WriteEntry(
+                        $"Started node PID {_nodeProcess.Id}",
+                        EventLogEntryType.Information
+                    );
+
+                    System.Threading.Thread.Sleep(3000);
+
+                    _eventLog.WriteEntry(
+                        $"HasExited = {_nodeProcess.HasExited}",
+                        EventLogEntryType.Information
+                    );
                     _nodeProcess.BeginOutputReadLine();
                     _nodeProcess.BeginErrorReadLine();
 
                     _eventLog.WriteEntry(
                         $"Node.js process started. PID: {_nodeProcess.Id}",
-                        EventLogEntryType.Information);
+                        EventLogEntryType.Information
+                    );
                 }
                 catch (Exception ex)
                 {
-                    _eventLog.WriteEntry($"Failed to start Node.js process: {ex.Message}", EventLogEntryType.Error);
+                    _eventLog.WriteEntry(
+                        $"Failed to start Node.js process: {ex.Message}",
+                        EventLogEntryType.Error
+                    );
                     throw;
                 }
             }
@@ -156,7 +180,10 @@ namespace EndpointAgentService
             {
                 if (!IsRunning)
                 {
-                    _eventLog.WriteEntry("Node.js process is not running.", EventLogEntryType.Information);
+                    _eventLog.WriteEntry(
+                        "Node.js process is not running.",
+                        EventLogEntryType.Information
+                    );
                     return;
                 }
 
@@ -170,7 +197,8 @@ namespace EndpointAgentService
                     {
                         _eventLog.WriteEntry(
                             "Node.js process did not exit in time. Force terminating.",
-                            EventLogEntryType.Warning);
+                            EventLogEntryType.Warning
+                        );
 
                         _nodeProcess.Kill(true);
                         _nodeProcess.WaitForExit(5000);
@@ -179,11 +207,17 @@ namespace EndpointAgentService
                     _nodeProcess.Dispose();
                     _nodeProcess = null;
 
-                    _eventLog.WriteEntry("Node.js process stopped successfully.", EventLogEntryType.Information);
+                    _eventLog.WriteEntry(
+                        "Node.js process stopped successfully.",
+                        EventLogEntryType.Information
+                    );
                 }
                 catch (Exception ex)
                 {
-                    _eventLog.WriteEntry($"Error stopping Node.js process: {ex.Message}", EventLogEntryType.Error);
+                    _eventLog.WriteEntry(
+                        $"Error stopping Node.js process: {ex.Message}",
+                        EventLogEntryType.Error
+                    );
                 }
             }
         }
@@ -213,8 +247,12 @@ namespace EndpointAgentService
                 {
                     try
                     {
-                        if (p.MainModule?.FileName?.StartsWith(
-                                _nodeAppPath, StringComparison.OrdinalIgnoreCase) == true)
+                        if (
+                            p.MainModule?.FileName?.StartsWith(
+                                _nodeAppPath,
+                                StringComparison.OrdinalIgnoreCase
+                            ) == true
+                        )
                         {
                             p.Kill(true);
                         }
@@ -229,7 +267,8 @@ namespace EndpointAgentService
             {
                 _eventLog.WriteEntry(
                     $"Failed to terminate previous process: {ex.Message}",
-                    EventLogEntryType.Warning);
+                    EventLogEntryType.Warning
+                );
             }
         }
 

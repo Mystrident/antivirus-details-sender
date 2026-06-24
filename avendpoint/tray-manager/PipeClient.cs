@@ -1,6 +1,7 @@
 using System;
 using System.IO.Pipes;
 using System.Text;
+using System.IO;
 
 namespace EndpointTrayManager
 {
@@ -13,10 +14,10 @@ namespace EndpointTrayManager
         {
             try
             {
-                using (var pipeClient = new NamedPipeClientStream(
-                    ServerName,
-                    PipeName,
-                    PipeAccessRights.ReadWrite))
+                using var pipeClient = new NamedPipeClientStream(
+    ServerName,
+    PipeName,
+    PipeDirection.InOut);
                 {
                     // Try to connect with timeout
                     pipeClient.Connect(5000); // 5 second timeout

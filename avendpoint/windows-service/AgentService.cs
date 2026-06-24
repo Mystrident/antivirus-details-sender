@@ -1,8 +1,8 @@
 using System;
-using System.ServiceProcess;
-using System.Timers;
 using System.Diagnostics;
 using System.IO;
+using System.ServiceProcess;
+using System.Timers;
 
 namespace EndpointAgentService
 {
@@ -16,7 +16,7 @@ namespace EndpointAgentService
         public AgentService()
         {
             ServiceName = "EndpointAgent";
-            DisplayName = "Endpoint Agent";
+
             CanStop = true;
             CanPauseAndContinue = true;
             AutoLog = true;
@@ -31,45 +31,83 @@ namespace EndpointAgentService
             _eventLog.Source = "EndpointAgent";
         }
 
+        public void DebugStart()
+        {
+            OnStart(null);
+
+            Console.WriteLine("Endpoint Agent running...");
+            Console.WriteLine("Press ENTER to stop.");
+
+            Console.ReadLine();
+
+            OnStop();
+        }
+
         protected override void OnStart(string[] args)
         {
-            _eventLog.WriteEntry("Starting Endpoint Agent Service...", EventLogEntryType.Information);
+            _eventLog.WriteEntry(
+                "Starting Endpoint Agent Service...",
+                EventLogEntryType.Information
+            );
 
             try
             {
                 // Initialize process manager
-                string nodeAppPath = GetConfigValue("NodeAppPath", "C:\\Program Files\\EndpointAgent\\avendpoint\\");
-                string nodeExePath = GetConfigValue("NodeExePath", "C:\\Program Files\\EndpointAgent\\node.exe");
+                string nodeAppPath = GetConfigValue(
+                    "NodeAppPath",
+                    @"C:\Users\prana\Downloads\antivirus-details-sender-main\antivirus-details-sender\avendpoint"
+                );
+
+                string nodeExePath = GetConfigValue(
+                    "NodeExePath",
+                    "C:\\Program Files\\nodejs\\node.exe"
+                );
                 _processManager = new ProcessManager(nodeExePath, nodeAppPath, _eventLog);
 
                 // Start Node.js application
                 _processManager.Start();
-                _eventLog.WriteEntry("Node.js process started successfully.", EventLogEntryType.Information);
+                _eventLog.WriteEntry(
+                    "Node.js process started successfully.",
+                    EventLogEntryType.Information
+                );
 
                 // Initialize IPC pipe server
                 _pipeServer = new PipeServer(_processManager, _eventLog);
                 _pipeServer.Start();
-                _eventLog.WriteEntry("Pipe server started successfully.", EventLogEntryType.Information);
+                _eventLog.WriteEntry(
+                    "Pipe server started successfully.",
+                    EventLogEntryType.Information
+                );
 
                 // Start health check timer
-                int healthCheckInterval = GetConfigValueInt("HealthCheckIntervalSeconds", 30) * 1000;
+                int healthCheckInterval =
+                    GetConfigValueInt("HealthCheckIntervalSeconds", 30) * 1000;
                 _healthCheckTimer = new Timer(healthCheckInterval);
                 _healthCheckTimer.Elapsed += HealthCheck;
                 _healthCheckTimer.AutoReset = true;
                 _healthCheckTimer.Start();
 
-                _eventLog.WriteEntry("Endpoint Agent Service started successfully.", EventLogEntryType.Information);
+                _eventLog.WriteEntry(
+                    "Endpoint Agent Service started successfully.",
+                    EventLogEntryType.Information
+                );
             }
             catch (Exception ex)
             {
-                _eventLog.WriteEntry($"Service startup failed: {ex.Message}\n{ex.StackTrace}", EventLogEntryType.Error);
+                _eventLog.WriteEntry(
+                    $"Service startup failed: {ex.Message}\n{ex.StackTrace}",
+                    EventLogEntryType.Error
+                );
                 throw;
             }
         }
 
         protected override void OnStop()
         {
-            _eventLog.WriteEntry("Stopping Endpoint Agent Service...", EventLogEntryType.Information);
+            _eventLog.WriteEntry(
+                "Stopping Endpoint Agent Service...",
+                EventLogEntryType.Information
+            );
 
             try
             {
@@ -89,7 +127,10 @@ namespace EndpointAgentService
                     _processManager.Stop();
                 }
 
-                _eventLog.WriteEntry("Endpoint Agent Service stopped successfully.", EventLogEntryType.Information);
+                _eventLog.WriteEntry(
+                    "Endpoint Agent Service stopped successfully.",
+                    EventLogEntryType.Information
+                );
             }
             catch (Exception ex)
             {
@@ -103,11 +144,17 @@ namespace EndpointAgentService
             {
                 if (_processManager != null && !_processManager.IsRunning)
                 {
-                    _eventLog.WriteEntry("Node.js process is not running. Attempting restart...", EventLogEntryType.Warning);
+                    _eventLog.WriteEntry(
+                        "Node.js process is not running. Attempting restart...",
+                        EventLogEntryType.Warning
+                    );
                     int restartDelaySeconds = GetConfigValueInt("RestartDelaySeconds", 5);
                     System.Threading.Thread.Sleep(restartDelaySeconds * 1000);
                     _processManager.Start();
-                    _eventLog.WriteEntry("Node.js process restarted successfully.", EventLogEntryType.Information);
+                    _eventLog.WriteEntry(
+                        "Node.js process restarted successfully.",
+                        EventLogEntryType.Information
+                    );
                 }
             }
             catch (Exception ex)

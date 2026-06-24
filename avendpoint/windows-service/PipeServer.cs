@@ -1,9 +1,10 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.IO.Pipes;
 using System.Text;
-using System.Threading;
-using System.Diagnostics;
 using System.Text.Json;
+using System.Threading;
 
 namespace EndpointAgentService
 {
@@ -27,7 +28,10 @@ namespace EndpointAgentService
             _isRunning = true;
             _listenerThread = new Thread(ListenForConnections);
             _listenerThread.Start();
-            _eventLog.WriteEntry("Pipe server listening on: " + PipeName, EventLogEntryType.Information);
+            _eventLog.WriteEntry(
+                "Pipe server listening on: " + PipeName,
+                EventLogEntryType.Information
+            );
         }
 
         public void Stop()
@@ -46,11 +50,14 @@ namespace EndpointAgentService
             {
                 try
                 {
-                    using (var pipeServer = new NamedPipeServerStream(
-                        PipeName,
-                        PipeDirection.InOut,
-                        NamedPipeServerStream.MaxAllowedServerInstances,
-                        PipeTransmissionMode.Message))
+                    using (
+                        var pipeServer = new NamedPipeServerStream(
+                            PipeName,
+                            PipeDirection.InOut,
+                            NamedPipeServerStream.MaxAllowedServerInstances,
+                            PipeTransmissionMode.Message
+                        )
+                    )
                     {
                         pipeServer.WaitForConnection();
                         HandleClient(pipeServer);
@@ -60,7 +67,10 @@ namespace EndpointAgentService
                 {
                     if (_isRunning)
                     {
-                        _eventLog.WriteEntry($"Pipe server error: {ex.Message}", EventLogEntryType.Error);
+                        _eventLog.WriteEntry(
+                            $"Pipe server error: {ex.Message}",
+                            EventLogEntryType.Error
+                        );
                     }
                 }
             }
@@ -81,7 +91,10 @@ namespace EndpointAgentService
             }
             catch (Exception ex)
             {
-                _eventLog.WriteEntry($"Error handling client: {ex.Message}", EventLogEntryType.Error);
+                _eventLog.WriteEntry(
+                    $"Error handling client: {ex.Message}",
+                    EventLogEntryType.Error
+                );
             }
         }
 
@@ -95,7 +108,7 @@ namespace EndpointAgentService
                     "START_AGENT" => StartAgent(),
                     "STOP_AGENT" => StopAgent(),
                     "GET_UPTIME" => GetUptimeJson(),
-                    _ => ErrorResponse("Unknown command: " + command)
+                    _ => ErrorResponse("Unknown command: " + command),
                 };
             }
             catch (Exception ex)
@@ -111,7 +124,7 @@ namespace EndpointAgentService
                 status = _processManager.IsRunning ? "RUNNING" : "STOPPED",
                 uptime = _processManager.UptimeSeconds,
                 processId = _processManager.ProcessId,
-                lastError = (string)null
+                lastError = (string)null,
             };
             return JsonSerializer.Serialize(status);
         }

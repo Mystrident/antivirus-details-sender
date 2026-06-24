@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.ServiceProcess;
-using System.Configuration.Install;
-using System.Reflection;
 
 namespace EndpointAgentService
 {
@@ -21,9 +19,8 @@ namespace EndpointAgentService
                         UninstallService();
                         break;
                     case "debug":
-                        // Run service in console for debugging
-                        ServiceBase[] servicesToRun = new ServiceBase[] { new AgentService() };
-                        ServiceBase.Run(servicesToRun);
+                        var service = new AgentService();
+                        service.DebugStart();
                         break;
                     default:
                         Console.WriteLine("Usage: EndpointAgentService [install|uninstall|debug]");
@@ -32,7 +29,6 @@ namespace EndpointAgentService
             }
             else
             {
-                // Normal service start
                 ServiceBase[] servicesToRun = new ServiceBase[] { new AgentService() };
                 ServiceBase.Run(servicesToRun);
             }
@@ -40,30 +36,45 @@ namespace EndpointAgentService
 
         private static void InstallService()
         {
-            try
-            {
-                ManagedInstallerClass.InstallHelper(new string[] { Assembly.GetExecutingAssembly().Location });
-                Console.WriteLine("Service installed successfully.");
-                EventLog.WriteEntry("EndpointAgent", "Service installed successfully.", EventLogEntryType.Information);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Installation failed: {ex.Message}");
-                EventLog.WriteEntry("EndpointAgent", $"Installation failed: {ex.Message}", EventLogEntryType.Error);
-            }
+            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+
+            // .NET 6+ publishes as .exe, not .dll — adjust path if needed
+            exePath = exePath.Replace(".dll", ".exe");
+
+            RunSc(
+                $"create EndpointAgent binPath= \"{exePath}\" start= auto DisplayName= \"Endpoint Agent\""
+            );
+            RunSc("description EndpointAgent \"Antivirus endpoint information collection agent\"");
+            RunSc("start EndpointAgent");
         }
 
         private static void UninstallService()
         {
-            try
+            RunSc("stop EndpointAgent");
+            RunSc("delete EndpointAgent");
+        }
+
+        private static void RunSc(string arguments)
+        {
+            var psi = new ProcessStartInfo
             {
-                ManagedInstallerClass.InstallHelper(new string[] { "/u", Assembly.GetExecutingAssembly().Location });
-                Console.WriteLine("Service uninstalled successfully.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Uninstallation failed: {ex.Message}");
-            }
+                FileName = "sc.exe",
+                Arguments = arguments,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+
+            using var process = Process.Start(psi);
+            string output = process.StandardOutput.ReadToEnd();
+            string error = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+
+            if (!string.IsNullOrWhiteSpace(output))
+                Console.WriteLine(output);
+            if (!string.IsNullOrWhiteSpace(error))
+                Console.WriteLine("Error: " + error);
         }
     }
 }
