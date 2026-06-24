@@ -13,6 +13,9 @@ namespace EndpointTrayManager
         private System.Timers.Timer _statusCheckTimer;
         private bool _isRunning;
 
+        private Icon _greenIcon;
+        private Icon _redIcon;
+
         public TrayForm()
         {
             InitializeComponent();
@@ -32,7 +35,6 @@ namespace EndpointTrayManager
         {
             _contextMenu = new ContextMenuStrip();
 
-            // Status label
             var statusLabel = new ToolStripMenuItem("Status: Unknown");
             statusLabel.Enabled = false;
             statusLabel.Name = "StatusLabel";
@@ -40,32 +42,29 @@ namespace EndpointTrayManager
 
             _contextMenu.Items.Add(new ToolStripSeparator());
 
-            // Start button
-            var startItem = new ToolStripMenuItem("Start Agent");
-            startItem.Click += (s, e) => StartAgent();
-            startItem.Name = "StartItem";
-            _contextMenu.Items.Add(startItem);
+            var restartItem = new ToolStripMenuItem("Restart Agent");
+            restartItem.Name = "RestartItem";
+            restartItem.Click += (s, e) => RestartAgent();
 
-            // Stop button
-            var stopItem = new ToolStripMenuItem("Stop Agent");
-            stopItem.Click += (s, e) => StopAgent();
-            stopItem.Name = "StopItem";
-            _contextMenu.Items.Add(stopItem);
+            _contextMenu.Items.Add(restartItem);
 
             _contextMenu.Items.Add(new ToolStripSeparator());
 
-            // Exit button
             var exitItem = new ToolStripMenuItem("Exit Manager");
             exitItem.Click += (s, e) => ExitManager();
+
             _contextMenu.Items.Add(exitItem);
         }
 
         private void InitializeTrayIcon()
         {
-            _trayIcon = new NotifyIcon();
-            _trayIcon.ContextMenuStrip = _contextMenu;
-            _trayIcon.Visible = true;
+            _greenIcon = CreateColoredIcon(Color.Green);
+            _redIcon = CreateColoredIcon(Color.Red);
+
+            _trayIcon = new NotifyIcon { ContextMenuStrip = _contextMenu, Visible = true };
+
             _trayIcon.DoubleClick += (s, e) => ToggleVisibility();
+
             UpdateTrayIcon();
         }
 
@@ -89,20 +88,16 @@ namespace EndpointTrayManager
                         try
                         {
                             string statusJson = _pipeClient.SendCommand("GET_STATUS");
+
                             _isRunning = statusJson.Contains("\"status\":\"RUNNING\"");
 
-                            // Update context menu
                             foreach (ToolStripItem item in _contextMenu.Items)
                             {
                                 if (item.Name == "StatusLabel")
                                 {
                                     item.Text = _isRunning ? "Status: Running" : "Status: Stopped";
                                 }
-                                else if (item.Name == "StartItem")
-                                {
-                                    item.Enabled = !_isRunning;
-                                }
-                                else if (item.Name == "StopItem")
+                                else if (item.Name == "RestartItem")
                                 {
                                     item.Enabled = _isRunning;
                                 }
@@ -110,7 +105,7 @@ namespace EndpointTrayManager
 
                             UpdateTrayIcon();
                         }
-                        catch (Exception ex)
+                        catch
                         {
                             foreach (ToolStripItem item in _contextMenu.Items)
                             {
@@ -119,6 +114,7 @@ namespace EndpointTrayManager
                                     item.Text = "Status: Error";
                                 }
                             }
+
                             _trayIcon.Icon = SystemIcons.Warning;
                         }
                     }
@@ -129,15 +125,55 @@ namespace EndpointTrayManager
         {
             if (_isRunning)
             {
-                // Green icon for running
-                _trayIcon.Icon = CreateColoredIcon(Color.Green);
+                _trayIcon.Icon = _greenIcon;
                 _trayIcon.Text = "Endpoint Agent - Running";
             }
             else
             {
-                // Red icon for stopped
-                _trayIcon.Icon = CreateColoredIcon(Color.Red);
-                _trayIcon.Text = "Endpoint Agent - Stopped";
+                _trayIcon.Icon = _redIcon;
+                _trayIcon.Text = "Endpoint Agent - Offline";
+            }
+        }
+
+        private void RestartAgent()
+        {
+            try
+            {
+                string response = _pipeClient.SendCommand("STOP_AGENT");
+
+                if (!response.Contains("SUCCESS"))
+                {
+                    MessageBox.Show(
+                        "Failed to stop agent.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+
+                    return;
+                }
+
+                System.Threading.Thread.Sleep(2000);
+
+                response = _pipeClient.SendCommand("START_AGENT");
+
+                if (!response.Contains("SUCCESS"))
+                {
+                    MessageBox.Show(
+                        "Failed to start agent.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+
+                    return;
+                }
+
+                UpdateServiceStatus();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -241,8 +277,15 @@ namespace EndpointTrayManager
 
         private void ExitManager()
         {
-            _statusCheckTimer.Stop();
+            _statusCheckTimer?.Stop();
+            _statusCheckTimer?.Dispose();
+
             _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+
+            _greenIcon?.Dispose();
+            _redIcon?.Dispose();
+
             Application.Exit();
         }
 

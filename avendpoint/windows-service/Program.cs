@@ -36,15 +36,18 @@ namespace EndpointAgentService
 
         private static void InstallService()
         {
-            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-
-            // .NET 6+ publishes as .exe, not .dll — adjust path if needed
-            exePath = exePath.Replace(".dll", ".exe");
+            string exePath = Process.GetCurrentProcess().MainModule!.FileName!;
 
             RunSc(
-                $"create EndpointAgent binPath= \"{exePath}\" start= auto DisplayName= \"Endpoint Agent\""
+                $"create EndpointAgent start= auto binPath= \"{exePath}\" DisplayName= \"Endpoint Agent\""
             );
+
             RunSc("description EndpointAgent \"Antivirus endpoint information collection agent\"");
+
+            RunSc(
+                "failure EndpointAgent reset= 86400 actions= restart/5000/restart/5000/restart/5000"
+            );
+
             RunSc("start EndpointAgent");
         }
 

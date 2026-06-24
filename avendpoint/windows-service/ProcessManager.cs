@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 
 namespace EndpointAgentService
 {
@@ -11,6 +12,27 @@ namespace EndpointAgentService
         private EventLog _eventLog;
         private Process _nodeProcess;
         private object _lockObj = new object();
+
+        private static string? GetCommandLine(Process process)
+        {
+            try
+            {
+                using var searcher = new ManagementObjectSearcher(
+                    $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {process.Id}"
+                );
+
+                foreach (ManagementObject obj in searcher.Get())
+                {
+                    return obj["CommandLine"]?.ToString();
+                }
+            }
+            catch
+            {
+                // Handle or log exception if needed
+            }
+
+            return null;
+        }
 
         public bool IsRunning
         {
@@ -80,7 +102,7 @@ namespace EndpointAgentService
                 }
 
                 long age = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - timestamp;
-                return age < TimeSpan.FromMinutes(3).TotalMilliseconds;
+                return age < TimeSpan.FromMinutes(5).TotalMilliseconds;
             }
             catch (Exception ex)
             {
@@ -149,12 +171,6 @@ namespace EndpointAgentService
                         EventLogEntryType.Information
                     );
 
-                    System.Threading.Thread.Sleep(3000);
-
-                    _eventLog.WriteEntry(
-                        $"HasExited = {_nodeProcess.HasExited}",
-                        EventLogEntryType.Information
-                    );
                     _nodeProcess.BeginOutputReadLine();
                     _nodeProcess.BeginErrorReadLine();
 
@@ -189,7 +205,7 @@ namespace EndpointAgentService
 
                 try
                 {
-                    // Signal graceful shutdown before waiting
+                    // Signal graceful shutdown before waiting, its just mimicking, does not implement sigterm yet
                     _nodeProcess.CloseMainWindow();
 
                     int timeoutSeconds = 10;
@@ -243,23 +259,33 @@ namespace EndpointAgentService
                 }
 
                 // Kill any orphaned node processes running from our app directory
+                // Kill any orphaned EndpointAgent node processes
                 foreach (var p in Process.GetProcessesByName("node"))
                 {
                     try
                     {
+                        string? cmd = GetCommandLine(p);
+
                         if (
-                            p.MainModule?.FileName?.StartsWith(
-                                _nodeAppPath,
-                                StringComparison.OrdinalIgnoreCase
-                            ) == true
+                            cmd != null
+                            && cmd.Contains("dist/index.js", StringComparison.OrdinalIgnoreCase)
                         )
                         {
+                            _eventLog.WriteEntry(
+                                $"Killing orphaned node process. PID={p.Id}",
+                                EventLogEntryType.Information
+                            );
+
                             p.Kill(true);
+                            p.WaitForExit(5000);
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Skip processes we can't access (e.g. access denied)
+                        _eventLog.WriteEntry(
+                            $"Failed to inspect node PID {p.Id}: {ex.Message}",
+                            EventLogEntryType.Warning
+                        );
                     }
                 }
             }

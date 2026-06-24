@@ -3,9 +3,19 @@ import { startScheduler, sendHeartbeat } from "./scheduler/scheduler.js";
 import { logger } from "./logger.js";
 import fs from "fs";
 
-setInterval(() => {
-  fs.writeFileSync("heartbeat.txt", Date.now().toString());
-}, 60000);
+function startHeartbeat() {
+  const update = () => {
+    try {
+      fs.writeFileSync("heartbeat.txt", Date.now().toString());
+    } catch (err) {
+      logger.error({ err }, "Failed updating heartbeat");
+    }
+  };
+
+  update();
+
+  setInterval(update, 60000);
+}
 
 process.on("uncaughtException", (error) => {
   logger.fatal({ err: error }, "Uncaught exception");
@@ -16,6 +26,8 @@ process.on("unhandledRejection", (reason) => {
   logger.fatal({ err: reason }, "Unhandled promise rejection");
   process.exit(1);
 });
+
+startHeartbeat();
 
 async function bootstrap() {
   logger.info("Agent startup initiated");

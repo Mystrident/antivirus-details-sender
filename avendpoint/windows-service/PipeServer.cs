@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -50,14 +52,26 @@ namespace EndpointAgentService
             {
                 try
                 {
-                    using (
-                        var pipeServer = new NamedPipeServerStream(
-                            PipeName,
-                            PipeDirection.InOut,
-                            NamedPipeServerStream.MaxAllowedServerInstances,
-                            PipeTransmissionMode.Message
+                    var pipeSecurity = new PipeSecurity();
+
+                    pipeSecurity.AddAccessRule(
+                        new PipeAccessRule(
+                            new SecurityIdentifier(WellKnownSidType.AuthenticatedUserSid, null),
+                            PipeAccessRights.FullControl,
+                            AccessControlType.Allow
                         )
-                    )
+                    );
+
+                    using var pipeServer = NamedPipeServerStreamAcl.Create(
+                        PipeName,
+                        PipeDirection.InOut,
+                        NamedPipeServerStream.MaxAllowedServerInstances,
+                        PipeTransmissionMode.Message,
+                        PipeOptions.None,
+                        1024,
+                        1024,
+                        pipeSecurity
+                    );
                     {
                         pipeServer.WaitForConnection();
                         HandleClient(pipeServer);

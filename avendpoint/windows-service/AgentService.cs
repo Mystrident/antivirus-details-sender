@@ -53,15 +53,15 @@ namespace EndpointAgentService
             try
             {
                 // Initialize process manager
-                string nodeAppPath = GetConfigValue(
-                    "NodeAppPath",
-                    @"C:\Users\prana\Downloads\antivirus-details-sender-main\antivirus-details-sender\avendpoint"
-                );
+                // Installed directory of EndpointAgentService.exe
+                string installDir = AppDomain.CurrentDomain.BaseDirectory;
 
-                string nodeExePath = GetConfigValue(
-                    "NodeExePath",
-                    "C:\\Program Files\\nodejs\\node.exe"
-                );
+                // node.exe bundled with installer
+                string nodeExePath = Path.Combine(installDir, "node.exe");
+
+                // dist + node_modules live in same install folder
+                string nodeAppPath = installDir;
+
                 _processManager = new ProcessManager(nodeExePath, nodeAppPath, _eventLog);
 
                 // Start Node.js application
@@ -142,17 +142,24 @@ namespace EndpointAgentService
         {
             try
             {
-                if (_processManager != null && !_processManager.IsRunning)
+                if (_processManager == null)
+                    return;
+
+                if (!_processManager.IsHealthy())
                 {
                     _eventLog.WriteEntry(
-                        "Node.js process is not running. Attempting restart...",
-                        EventLogEntryType.Warning
+                        $"Heartbeat age check. Healthy={_processManager.IsHealthy()}",
+                        EventLogEntryType.Information
                     );
+
                     int restartDelaySeconds = GetConfigValueInt("RestartDelaySeconds", 5);
+
                     System.Threading.Thread.Sleep(restartDelaySeconds * 1000);
-                    _processManager.Start();
+
+                    _processManager.Restart();
+
                     _eventLog.WriteEntry(
-                        "Node.js process restarted successfully.",
+                        "Agent restarted successfully.",
                         EventLogEntryType.Information
                     );
                 }
