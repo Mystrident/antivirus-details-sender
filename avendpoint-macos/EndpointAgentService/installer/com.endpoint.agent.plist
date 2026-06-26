@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+"http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+<plist version="1.0">
+
+<dict>
+
+    <key>Label</key>
+    <string>com.endpoint.agent</string>
+
+    <key>ProgramArguments</key>
+
+    <array>
+
+        <string>/Library/Application Support/EndpointAgent/EndpointAgentService</string>
+
+    </array>
+
+    <key>WorkingDirectory</key>
+
+    <string>/Library/Application Support/EndpointAgent</string>
+
+    <key>RunAtLoad</key>
+
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    
+
+    <key>UserName</key>
+
+    <string>root</string>
+
+    <key>StandardOutPath</key>
+
+    <string>/Library/Logs/EndpointAgent.log</string>
+
+    <key>StandardErrorPath</key>
+
+    <string>/Library/Logs/EndpointAgent.err</string>
+
+</dict>
+
+</plist>
