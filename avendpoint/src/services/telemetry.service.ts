@@ -18,6 +18,8 @@ export async function collectTelemetry(): Promise<TelemetryPayload> {
 
     macAddress: endpoint.macAddress,
 
+    platform:endpoint.osName,
+
     antivirus,
 
     collectedAt: new Date().toISOString(),
