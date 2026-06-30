@@ -16,6 +16,7 @@ export async function collectTelemetry(): Promise<TelemetryPayload> {
     assetId:     config.assetId,
     location:    config.location,
     macAddress:  endpoint.macAddress,
+    platform:endpoint.osName,
     antivirus,
     collectedAt: new Date().toISOString(),
   };

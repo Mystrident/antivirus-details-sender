@@ -3,3 +3,4 @@ dist/
 .env
 heartbeat.txt
 *.js.map
+config.json

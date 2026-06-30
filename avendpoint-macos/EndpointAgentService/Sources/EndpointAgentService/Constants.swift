@@ -2,37 +2,72 @@ import Foundation
 
 enum Constants {
 
-    // MARK: - Application
+    private static let fileManager = FileManager.default
 
-    static let appDirectory =
+    /// Folder containing the Swift executable
+    static var executableDirectory: String {
+        URL(fileURLWithPath: CommandLine.arguments[0])
+            .deletingLastPathComponent()
+            .path
+    }
+
+    /// Development repo root
+    static var developmentRoot: String {
+        URL(fileURLWithPath: executableDirectory)
+            .deletingLastPathComponent()   // EndpointAgentService
+            .deletingLastPathComponent()   // .build
+            .deletingLastPathComponent()   // project root
+            .path
+    }
+
+    /// Installed application
+    static let productionRoot =
         "/Library/Application Support/EndpointAgent"
 
-    static let nodeExecutable =
-        "\(appDirectory)/node"
+    static var appDirectory: String {
 
-    static let nodeScript =
+        if fileManager.fileExists(
+            atPath: "\(developmentRoot)/package.json"
+        ) {
+            return developmentRoot
+        }
+
+        return productionRoot
+    }
+
+    static var nodeExecutable: String {
+
+        // During development use Homebrew Node
+        if fileManager.fileExists(atPath: "/opt/homebrew/bin/node") {
+            return "/opt/homebrew/bin/node"
+        }
+
+        // Intel Macs
+        if fileManager.fileExists(atPath: "/usr/local/bin/node") {
+            return "/usr/local/bin/node"
+        }
+
+        // Production
+        return "\(productionRoot)/node"
+    }
+
+    static var nodeScript: String {
         "\(appDirectory)/dist/index.js"
+    }
 
-    static let configFile =
-        "\(appDirectory)/config.json"
-
-    static let heartbeatFile =
+    static var heartbeatFile: String {
         "\(appDirectory)/heartbeat.txt"
+    }
+static var socketPath: String {
 
-    // MARK: - IPC
+    if appDirectory == productionRoot {
+        return "/var/run/endpointagent.sock"
+    }
 
-    static let socketPath =
-        "/var/run/endpointagent.sock"
+    return "/tmp/endpointagent.sock"
+}
 
-    // MARK: - Health Monitoring
-
-    /// Restart Node if heartbeat is older than 5 minutes.
-    static let heartbeatTimeout: TimeInterval = 300
-
-    /// Check heartbeat every minute.
+    static let heartbeatTimeout: TimeInterval = 180
     static let healthCheckInterval: TimeInterval = 60
-
-    // MARK: - Restart 
-
     static let restartDelay: TimeInterval = 5
 }
