@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:antivirus-details-sender}/avendpoint-macos/EndpointAgentService",
+            "name": "Debug EndpointAgentService (avendpoint-macos/EndpointAgentService)",
+            "target": "EndpointAgentService",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug EndpointAgentService (avendpoint-macos/EndpointAgentService)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:antivirus-details-sender}/avendpoint-macos/EndpointAgentService",
+            "name": "Release EndpointAgentService (avendpoint-macos/EndpointAgentService)",
+            "target": "EndpointAgentService",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release EndpointAgentService (avendpoint-macos/EndpointAgentService)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:antivirus-details-sender}/avendpoint-macos/EndpointTray",
+            "name": "Debug EndpointTray (avendpoint-macos/EndpointTray)",
+            "target": "EndpointTray",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug EndpointTray (avendpoint-macos/EndpointTray)"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:antivirus-details-sender}/avendpoint-macos/EndpointTray",
+            "name": "Release EndpointTray (avendpoint-macos/EndpointTray)",
+            "target": "EndpointTray",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release EndpointTray (avendpoint-macos/EndpointTray)"
+        }
+    ]
+}
