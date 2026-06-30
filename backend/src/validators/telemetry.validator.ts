@@ -6,6 +6,8 @@ export const telemetrySchema = z.object({
   assetId: z.string(),
 
   location: z.string(),
+  
+  platform: z.string(),
 
   antivirus: z.object({
     productName: z.string(),

@@ -31,6 +31,8 @@ export async function upsertAVStat(payload: TelemetryPayload) {
     update: {
       macAddress: payload.macAddress!,
 
+      platform:payload.platform,
+
       avInstalled: payload.antivirus.productName,
 
       version: payload.antivirus.version,
@@ -48,6 +50,8 @@ export async function upsertAVStat(payload: TelemetryPayload) {
       location: payload.location,
 
       macAddress: payload.macAddress!,
+
+      platform:payload.platform,
 
       avInstalled: payload.antivirus.productName,
 

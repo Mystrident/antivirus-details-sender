@@ -5,6 +5,7 @@ interface AVStatRecord {
   assetId: string;
   location: string;
   macAddress: string;
+  platform:"string";
   lastScanDate: Date | null;
 }
 
@@ -36,6 +37,8 @@ export async function syncScanAlert(stat: AVStatRecord) {
         location: stat.location,
 
         macAddress: stat.macAddress,
+
+        platform:stat.platform,
 
         lastScanDate: stat.lastScanDate,
       },

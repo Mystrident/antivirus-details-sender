@@ -14,6 +14,7 @@ export async function generateScanCsv() {
       { id: "assetId", title: "Asset ID" },
       { id: "location", title: "Location" },
       { id: "macAddress", title: "MAC Address" },
+      {id:"platform", title:"Platform"},
       { id: "lastScanDate", title: "Last Scan Date" },
     ],
 

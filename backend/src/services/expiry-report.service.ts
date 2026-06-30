@@ -2,6 +2,7 @@ import { getExpiryAlerts } from "./report.service.js";
 
 import { createCsv } from "./csv.service.js";
 
+
 export async function generateExpiryCsv() {
   const records = await getExpiryAlerts();
 
@@ -13,6 +14,7 @@ export async function generateExpiryCsv() {
     [
       { id: "assetId", title: "Asset ID" },
       { id: "location", title: "Location" },
+      {id:"platform", title:"Platform"},
       { id: "macAddress", title: "MAC Address" },
       { id: "expiryDate", title: "Expiry Date" },
     ],

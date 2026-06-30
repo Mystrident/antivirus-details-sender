@@ -16,6 +16,8 @@ model AVStatRepo {
 
   macAddress            String
 
+  platform              String
+
   avInstalled           String
 
   version               String?
@@ -42,6 +44,8 @@ model AVScanAlert {
 
   macAddress      String
 
+  platform              String
+
   lastScanDate    DateTime?
 
   alertCreatedAt  DateTime @default(now())
@@ -58,7 +62,27 @@ model AVExpiryAlert {
 
   macAddress      String
 
+  platform              String
+
   expiryDate      DateTime?
+
+  alertCreatedAt  DateTime @default(now())
+
+  @@unique([location, assetId])
+}
+
+model AVLastTelemetryAlert {
+  id              String   @id @default(cuid())
+
+  assetId         String
+
+  location        String
+
+  macAddress      String
+
+  platform              String
+
+  lastTelemetryReceived DateTime
 
   alertCreatedAt  DateTime @default(now())
 

@@ -3,6 +3,7 @@ import { prisma } from "../prisma.js";
 interface AVStatRecord {
   assetId: string;
   location: string;
+  platform:string;
   macAddress: string;
   expiryDate: Date | null;
 }
@@ -32,6 +33,7 @@ export async function syncExpiryAlert(stat: AVStatRecord) {
       create: {
         assetId: stat.assetId,
         location: stat.location,
+        platform:stat.platform,
         macAddress: stat.macAddress,
         expiryDate: stat.expiryDate,
       },
