@@ -9,3 +9,7 @@ export async function getScanAlerts() {
 export async function getExpiryAlerts() {
   return prisma.aVExpiryAlert.findMany();
 }
+
+export async function getLastTelemetryAlerts(){
+  return prisma.aVLastTelemetryAlert.findMany();
+}

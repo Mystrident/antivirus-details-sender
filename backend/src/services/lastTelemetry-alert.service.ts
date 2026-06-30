@@ -6,18 +6,18 @@ interface AVStatRecord {
   location: string;
   macAddress: string;
   platform:string;
-  lastScanDate: Date | null;
+  lastTelemetryReceived: Date | null;
 }
 
 export async function syncScanAlert(stat: AVStatRecord) {
-  if (!stat.lastScanDate) {
+  if (!stat.lastTelemetryReceived) {
     return;
   }
 
-  const age = daysBetween(stat.lastScanDate);
+  const age = daysBetween(stat.lastTelemetryReceived);
 
   if (age > 7) {
-    await prisma.aVScanAlert.upsert({
+    await prisma.aVLastTelemetryAlert.upsert({
       where: {
         location_assetId: {
           location: stat.location,
@@ -26,7 +26,7 @@ export async function syncScanAlert(stat: AVStatRecord) {
       },
 
       update: {
-        lastScanDate: stat.lastScanDate,
+        lastTelemetryReceived: stat.lastTelemetryReceived,
 
         macAddress: stat.macAddress,
       },
@@ -40,11 +40,11 @@ export async function syncScanAlert(stat: AVStatRecord) {
 
         platform:stat.platform,
 
-        lastScanDate: stat.lastScanDate,
+        lastTelemetryReceived: stat.lastTelemetryReceived,
       },
     });
   } else {
-    await prisma.aVScanAlert.deleteMany({
+    await prisma.aVLastTelemetryAlert.deleteMany({
       where: {
         assetId: stat.assetId,
 
