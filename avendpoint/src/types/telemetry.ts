@@ -5,6 +5,8 @@ export interface TelemetryPayload {
 
   macAddress: string | null;
 
+  platform:string,
+
   antivirus: {
     productName: string;
 
