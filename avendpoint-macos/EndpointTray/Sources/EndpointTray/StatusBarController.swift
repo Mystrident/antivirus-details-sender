@@ -25,10 +25,7 @@ final class StatusBarController {
                    action: nil,
                    keyEquivalent: "")
 
-    private let heartbeatMenuItem: NSMenuItem =
-        NSMenuItem(title: "Heartbeat : -",
-                   action: nil,
-                   keyEquivalent: "")
+    
 
     private var timer: Timer?
 
@@ -63,13 +60,13 @@ final class StatusBarController {
 
         menu.addItem(statusMenuItem)
         menu.addItem(pidMenuItem)
-        menu.addItem(heartbeatMenuItem)
+       
 
         menu.addItem(.separator())
 
         let restart: NSMenuItem =
             NSMenuItem(
-                title: "Restart Agent",
+                title: "Restart",
                 action: #selector(restartAgent),
                 keyEquivalent: ""
             )
@@ -80,7 +77,7 @@ final class StatusBarController {
 
         let shutdown: NSMenuItem =
             NSMenuItem(
-                title: "Stop Agent",
+                title: "Stop",
                 action: #selector(stopAgent),
                 keyEquivalent: ""
             )
@@ -89,18 +86,7 @@ final class StatusBarController {
 
         menu.addItem(shutdown)
 
-        menu.addItem(.separator())
-
-        let quit: NSMenuItem =
-            NSMenuItem(
-                title: "Quit",
-                action: #selector(quitApp),
-                keyEquivalent: "q"
-            )
-
-        quit.target = self
-
-        menu.addItem(quit)
+        
 
         statusItem.menu = menu
 
@@ -155,10 +141,7 @@ final class StatusBarController {
                 ? "PID: \(state.pid!)"
                 : "PID: -"
 
-        self.heartbeatMenuItem.title =
-            state.heartbeatAge != nil
-                ? "Heartbeat: \(state.heartbeatAge!)s"
-                : "Heartbeat: -"
+       
 
         switch state.status {
 
@@ -184,8 +167,7 @@ final class StatusBarController {
         pidMenuItem.title =
             "PID : -"
 
-        heartbeatMenuItem.title =
-            "Heartbeat : -"
+        
 
         statusItem.button?.title = "🔴"
 
@@ -231,11 +213,5 @@ final class StatusBarController {
 
     }
 
-    @objc
-    private func quitApp() {
-
-        NSApplication.shared.terminate(nil)
-
-    }
-
+    
 }
