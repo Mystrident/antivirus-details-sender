@@ -177,16 +177,24 @@ namespace EndpointTrayManager
             }
         }
 
+        
+       [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr handle);
+
         private Icon CreateColoredIcon(Color color)
         {
-            Bitmap bitmap = new Bitmap(16, 16);
+            using Bitmap bitmap = new Bitmap(16, 16);
             using (Graphics g = Graphics.FromImage(bitmap))
             {
                 g.Clear(Color.Transparent);
                 g.FillEllipse(new SolidBrush(color), 2, 2, 12, 12);
                 g.DrawEllipse(Pens.Black, 2, 2, 12, 12);
             }
-            return Icon.FromHandle(bitmap.GetHicon());
+
+            IntPtr hIcon = bitmap.GetHicon();
+            Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
+            DestroyIcon(hIcon);
+            return icon;
         }
 
         private void StartAgent()

@@ -117,8 +117,9 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
     const state = values.get(DATABASE_FIELDS.NORTON.KEYS.state);
     let lastScan: string | null = null;
 
+    const tempLogDb = createTempFilePath(TEMP_FILES.NORTON_LOG_PREFIX, TEMP_FILES.EXTENSION_DB);
+
     try {
-      const tempLogDb = createTempFilePath(TEMP_FILES.NORTON_LOG_PREFIX, TEMP_FILES.EXTENSION_DB);
       fs.copyFileSync(WINDOWS_PATHS.NORTON_LOG_DB, tempLogDb);
 
       const scanRow = await getSqliteValue<any>(
@@ -131,10 +132,10 @@ export async function getNortonMetrics(): Promise<NortonMetrics> {
       if (scanRow?.Started) {
         lastScan = extractAndParseDate(scanRow.Started, true);
       }
-
-      await cleanupTempFile(tempLogDb);
     } catch (e) {
       logger.error({ err: e }, 'Failed reading Norton Log.db');
+    } finally {
+      await cleanupTempFile(tempLogDb);
     }
 
     return {

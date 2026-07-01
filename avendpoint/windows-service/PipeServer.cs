@@ -6,6 +6,7 @@ using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace EndpointAgentService
@@ -90,6 +91,26 @@ namespace EndpointAgentService
             }
         }
 
+        private static readonly HashSet<string> PrivilegedCommands = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "START_AGENT",
+            "STOP_AGENT",
+        };
+
+        private bool IsCallerAdmin(NamedPipeServerStream pipeServer)
+        {
+            try
+            {
+                using WindowsIdentity clientIdentity = pipeServer.GetImpersonationWindowsIdentity();
+                var principal = new WindowsPrincipal(clientIdentity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private void HandleClient(NamedPipeServerStream pipeServer)
         {
             try
@@ -98,6 +119,14 @@ namespace EndpointAgentService
                 using (StreamWriter writer = new StreamWriter(pipeServer, Encoding.UTF8))
                 {
                     string command = reader.ReadLine();
+
+                    if (command != null && PrivilegedCommands.Contains(command) && !IsCallerAdmin(pipeServer))
+                    {
+                        writer.WriteLine(ErrorResponse("Access denied: administrator privileges required"));
+                        writer.Flush();
+                        return;
+                    }
+
                     string response = ProcessCommand(command);
                     writer.WriteLine(response);
                     writer.Flush();

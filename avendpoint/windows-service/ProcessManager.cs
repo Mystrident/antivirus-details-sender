@@ -260,6 +260,8 @@ namespace EndpointAgentService
 
                 // Kill any orphaned node processes running from our app directory
                 // Kill any orphaned EndpointAgent node processes
+                string expectedScriptPath = Path.Combine(_nodeAppPath, "dist", "index.js");
+
                 foreach (var p in Process.GetProcessesByName("node"))
                 {
                     try
@@ -268,7 +270,7 @@ namespace EndpointAgentService
 
                         if (
                             cmd != null
-                            && cmd.Contains("dist/index.js", StringComparison.OrdinalIgnoreCase)
+                            && cmd.Contains(expectedScriptPath, StringComparison.OrdinalIgnoreCase)
                         )
                         {
                             _eventLog.WriteEntry(

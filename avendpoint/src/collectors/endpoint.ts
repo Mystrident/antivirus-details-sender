@@ -32,11 +32,9 @@ export async function getEndpointMetadata(): Promise<EndpointMetadata> {
 
   return {
     hostname: os.hostname(),
-
     osName: `${os.platform()} ${os.release()}`,
-
-    macAddress: getMacAddress(),
-
+    macAddress,
     username: os.userInfo().username,
   };
 }
+
