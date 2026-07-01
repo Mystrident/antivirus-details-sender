@@ -26,30 +26,34 @@ enum Constants {
 
     static var appDirectory: String {
 
-        if fileManager.fileExists(
-            atPath: "\(developmentRoot)/package.json"
-        ) {
-            return developmentRoot
+    var url = URL(fileURLWithPath: executableDirectory)
+
+    for _ in 0..<5 {
+
+        let candidate = url.appendingPathComponent("package.json")
+
+        if FileManager.default.fileExists(atPath: candidate.path) {
+            return url.path
         }
 
-        return productionRoot
+        url.deleteLastPathComponent()
     }
+
+    return productionRoot
+}
 
     static var nodeExecutable: String {
 
-        // During development use Homebrew Node
-        if fileManager.fileExists(atPath: "/opt/homebrew/bin/node") {
-            return "/opt/homebrew/bin/node"
-        }
-
-        // Intel Macs
-        if fileManager.fileExists(atPath: "/usr/local/bin/node") {
-            return "/usr/local/bin/node"
-        }
-
-        // Production
-        return "\(productionRoot)/node"
+    if fileManager.fileExists(atPath: "/opt/homebrew/bin/node") {
+        return "/opt/homebrew/bin/node"
     }
+
+    if fileManager.fileExists(atPath: "/usr/local/bin/node") {
+        return "/usr/local/bin/node"
+    }
+
+    return "\(productionRoot)/node/bin/node"
+}
 
     static var nodeScript: String {
         "\(appDirectory)/dist/index.js"
@@ -59,12 +63,7 @@ enum Constants {
         "\(appDirectory)/heartbeat.txt"
     }
 static var socketPath: String {
-
-    if appDirectory == productionRoot {
-        return "/var/run/endpointagent.sock"
-    }
-
-    return "/tmp/endpointagent.sock"
+    "\(appDirectory)/run/endpointagent.sock"
 }
 
     static let heartbeatTimeout: TimeInterval = 180

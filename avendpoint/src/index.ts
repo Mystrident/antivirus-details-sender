@@ -34,7 +34,7 @@ async function bootstrap() {
 
   try {
     await sendHeartbeat();
-    logger.info("Initial heartbeat sent");
+    logger.info("Initial telemetry uploaded");
   } catch (error) {
     logger.error({ err: error }, "Initial heartbeat failed");
   }

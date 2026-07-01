@@ -4,3 +4,5 @@ dist/
 heartbeat.txt
 *.js.map
 config.json
+release/
+installer/payload/

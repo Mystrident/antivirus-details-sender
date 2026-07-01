@@ -32,12 +32,16 @@ final class SocketClient {
 
         }
 
+        logger.info("Connecting to socket: \(Constants.socketPath)")
+
         let result: Int32 = withUnsafePointer(to: &address) {
 
             $0.withMemoryRebound(
                 to: sockaddr.self,
                 capacity: 1
             ) {
+
+
 
                 connect(
                     socketFD,
@@ -52,8 +56,16 @@ final class SocketClient {
         }
 
         guard result == 0 else {
-            throw SocketError.connectionFailed
-        }
+
+    let message = String(cString: strerror(errno))
+
+    logger.error("connect() failed")
+    logger.error("errno = \(errno)")
+    logger.error(message)
+    logger.error("socket path = \(Constants.socketPath)")
+
+    throw SocketError.connectionFailed
+}
 
         let requestData: Data = try JSONEncoder().encode(request)
 

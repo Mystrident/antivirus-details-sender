@@ -1,5 +1,5 @@
 import schedule from 'node-schedule';
-import { sendFridayTelemetry } from '../services/friday-telemetry.service.js';
+import { sendScheduledTelemetry } from '../services/friday-telemetry.service.js';
 import { collectTelemetry } from '../services/telemetry.service.js';
 import { sendTelemetry } from '../transport/api.js';
 import { logger } from '../logger.js';
@@ -19,19 +19,19 @@ async function sendHeartbeat() {
 
     await sendTelemetry(payload);
 
-    logger.info('Heartbeat sent');
+    logger.info("Telemetry uploaded successfully");
   } catch (error) {
     logger.error({ err: error }, 'Heartbeat failed');
   }
 }
 
 export function startScheduler() {
-  logger.info('Friday scheduler started');
+  logger.info("Periodic telemetry scheduler started");
 
-  sendFridayTelemetry();
+  sendScheduledTelemetry();
 
   schedule.scheduleJob(SCHEDULES.HOURLY, async () => {
-    await sendFridayTelemetry();
+    await sendScheduledTelemetry();
   });
 }
 

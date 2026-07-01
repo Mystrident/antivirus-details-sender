@@ -24,7 +24,16 @@ final class SocketServer {
 
     func start() {
 
-        unlink(Constants.socketPath)
+        logger.info("Socket path: \(Constants.socketPath)")
+        
+        let socketDirectory = "\(Constants.appDirectory)/run"
+
+try? FileManager.default.createDirectory(
+    atPath: socketDirectory,
+    withIntermediateDirectories: true
+)
+
+unlink(Constants.socketPath)
 
         socketFD = socket(AF_UNIX, SOCK_STREAM, 0)
 
@@ -55,8 +64,12 @@ final class SocketServer {
         }
 
         guard result == 0 else {
-            logger.fatal("Socket bind failed")
+            logger.fatal("Socket bind failed: \(String(cString: strerror(errno)))")
         }
+
+        chmod(Constants.socketPath, 0o666)
+
+        logger.info("Socket created at: \(Constants.socketPath)")
 
         listen(socketFD, 5)
 
@@ -75,7 +88,14 @@ final class SocketServer {
 
             close(socketFD)
 
-            unlink(Constants.socketPath)
+            let socketDirectory = "\(Constants.appDirectory)/run"
+
+try? FileManager.default.createDirectory(
+    atPath: socketDirectory,
+    withIntermediateDirectories: true
+)
+
+unlink(Constants.socketPath)
 
             socketFD = -1
         }

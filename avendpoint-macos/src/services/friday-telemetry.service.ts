@@ -4,7 +4,7 @@ import { sendTelemetry } from '../transport/api.js';
 import { isFriday, getTodayString } from '../utils/friday.js';
 import { logger } from '../logger.js';
 
-export async function sendFridayTelemetry() {
+export async function sendScheduledTelemetry() {
   const config = getAgentConfig();
 
   if (!isFriday()) {
