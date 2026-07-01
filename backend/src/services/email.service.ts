@@ -28,9 +28,17 @@ export async function sendAlertMail(
 
   try {
 
-    logger.info("Verifying SMTP connection...");
+    logger.info({
+  host: process.env.SMTP_SERVER,
+  port: process.env.SMTP_PORT,
+  user: process.env.SMTP_USERNAME,
+  from: process.env.DEFAULT_FROM_EMAIL,
+  to: process.env.ADMIN_EMAIL,
+}, "SMTP Environment");
 
-    await transporter.verify();
+logger.info("Verifying SMTP connection...");
+
+await transporter.verify();
 
     logger.info("SMTP verification successful.");
 
@@ -57,7 +65,7 @@ export async function sendAlertMail(
       messageId: result.messageId,
       accepted: result.accepted,
       rejected: result.rejected,
-      pending: result.pending,
+      
       envelope: result.envelope,
       response: result.response,
     }, "Email sent successfully");

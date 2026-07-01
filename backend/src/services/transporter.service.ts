@@ -1,7 +1,6 @@
 import dns from "node:dns";
 import nodemailer from "nodemailer";
 
-// Prefer IPv4 over IPv6
 dns.setDefaultResultOrder("ipv4first");
 
 export const transporter = nodemailer.createTransport({
