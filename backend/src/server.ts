@@ -4,7 +4,6 @@ import cors from "cors";
 import { startWeeklyReportJob } from "./jobs/weekly-report.job.js";
 import { startCleanupJob } from "./jobs/cleanup.job.js";
 import dns from "node:dns/promises";
-import dnsPromises from "node:dns/promises";
 import telemetryRoutes from "./routes/telemetry.routes.js";
 import { logger } from "./logger.js";
 
@@ -19,17 +18,6 @@ app.use("/api/telemetry", telemetryRoutes);
 const PORT = process.env.PORT || 3000;
 
 dns.setDefaultResultOrder("ipv4first");
-
-console.log("DNS Order:", dns.getDefaultResultOrder());
-
-(async () => {
-  const records = await dnsPromises.lookup(
-    "smtp.office365.com",
-    { all: true }
-  );
-
-  console.log(records);
-})();
 
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);

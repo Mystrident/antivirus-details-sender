@@ -2,6 +2,7 @@ import { telemetrySchema } from "../validators/telemetry.validator.js";
 import { upsertAVStat } from "../repositories/avstat.repository.js";
 import { syncExpiryAlert } from "../services/expiry-alert.service.js";
 import { syncScanAlert } from "../services/scan-alert.service.js";
+import { syncLastTelemetryAlert } from "../services/lastTelemetry-alert.service.js";
 import { Request, Response } from "express";
 import { logger } from "../logger.js";
 
@@ -22,11 +23,15 @@ export async function receiveTelemetry(req: Request, res: Response) {
 
     await syncExpiryAlert(stat);
 
+    await syncLastTelemetryAlert(stat);
+
     return res.status(200).json({
       success: true,
       message: "Telemetry processed",
     });
   } catch (error) {
+    logger.error({ err: error }, "Failed to process telemetry payload");
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",

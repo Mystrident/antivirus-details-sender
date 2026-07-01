@@ -15,6 +15,8 @@ export function startCleanupJob() {
 
         await prisma.aVExpiryAlert.deleteMany();
 
+        await prisma.aVLastTelemetryAlert.deleteMany();
+
         logger.info("Alert tables cleared");
       } catch (error) {
         logger.error({ error }, "Cleanup failed");

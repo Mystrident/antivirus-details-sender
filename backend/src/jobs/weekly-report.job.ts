@@ -4,6 +4,8 @@ import { generateScanCsv } from "../services/scan-report.service.js";
 
 import { generateExpiryCsv } from "../services/expiry-report.service.js";
 
+import { generateLastTelemetryCsv } from "../services/lastTelemetry-report.service.js";
+
 import { sendAlertMail } from "../services/email.service.js";
 
 export function startWeeklyReportJob() {
@@ -12,7 +14,9 @@ export function startWeeklyReportJob() {
 
       const expiryCsv = await generateExpiryCsv();
 
-      await sendAlertMail(scanCsv, expiryCsv);
+      const lastTelemetryCsv = await generateLastTelemetryCsv();
+
+      await sendAlertMail(scanCsv, expiryCsv, lastTelemetryCsv);
     },
   );
 }

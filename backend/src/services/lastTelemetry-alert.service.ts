@@ -9,7 +9,7 @@ interface AVStatRecord {
   lastTelemetryReceived: Date | null;
 }
 
-export async function syncScanAlert(stat: AVStatRecord) {
+export async function syncLastTelemetryAlert(stat: AVStatRecord) {
   if (!stat.lastTelemetryReceived) {
     return;
   }

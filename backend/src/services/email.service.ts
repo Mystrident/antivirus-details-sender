@@ -8,18 +8,12 @@ dotenv.config();
 export async function sendAlertMail(
   scanCsvPath: string,
   expiryCsvPath: string,
-) {
+  lastTelemetryCsvPath: string,
+)  {
   logger.info("========================================");
   logger.info("Weekly Antivirus Email");
   logger.info("========================================");
 
-  logger.info({
-    from: process.env.DEFAULT_FROM_EMAIL,
-    to: process.env.ADMIN_EMAIL,
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: process.env.SMTP_SECURE,
-  }, "SMTP Configuration");
 
   logger.info({
     scanCsvPath,
@@ -49,7 +43,7 @@ await transporter.verify();
       to: process.env.ADMIN_EMAIL,
       subject: "Weekly Antivirus Alert Report",
       text: "Attached are this week's antivirus reports.",
-      attachments: [
+     attachments: [
         {
           filename: "scan-alerts.csv",
           path: scanCsvPath,
@@ -57,6 +51,10 @@ await transporter.verify();
         {
           filename: "expiry-alerts.csv",
           path: expiryCsvPath,
+        },
+        {
+          filename: "last-telemetry-alerts.csv",
+          path: lastTelemetryCsvPath,
         },
       ],
     });

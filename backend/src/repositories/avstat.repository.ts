@@ -51,19 +51,15 @@ export async function upsertAVStat(payload: TelemetryPayload) {
 
       macAddress: payload.macAddress!,
 
-      platform:payload.platform,
+      platform: payload.platform,
 
       avInstalled: payload.antivirus.productName,
 
       version: payload.antivirus.version,
 
-      lastScanDate: payload.antivirus.lastScan
-        ? new Date(payload.antivirus.lastScan)
-        : null,
+      lastScanDate: parseDate(payload.antivirus.lastScan),
 
-      expiryDate: payload.antivirus.expiryDate
-        ? new Date(payload.antivirus.expiryDate)
-        : null,
+      expiryDate: parseDate(payload.antivirus.expiryDate),
 
       lastTelemetryReceived: new Date(payload.collectedAt),
     },
