@@ -1,0 +1,153 @@
+#!/bin/bash
+
+set -e
+
+APP_DIR="/Library/Application Support/EndpointAgent"
+
+echo "===================================="
+echo " Endpoint Agent Post Install"
+echo "===================================="
+
+#
+# Runtime directories
+#
+
+mkdir -p "$APP_DIR/run"
+chmod 777 "$APP_DIR/run"
+
+#
+# Get logged-in user
+#
+
+CURRENT_USER=$(stat -f %Su /dev/console)
+CURRENT_UID=$(id -u "$CURRENT_USER")
+
+echo "Installing for: $CURRENT_USER ($CURRENT_UID)"
+
+#
+# Ask for Asset ID
+#
+
+while true
+do
+
+ASSET_ID=$(sudo -u "$CURRENT_USER" osascript <<EOF
+try
+    text returned of (display dialog "Enter Asset ID" with title "Endpoint Agent Registration" default answer "")
+on error
+    return "__CANCELLED__"
+end try
+EOF
+)
+
+if [ "$ASSET_ID" = "__CANCELLED__" ]; then
+    echo "Installation cancelled."
+    exit 1
+fi
+
+if [ -n "$ASSET_ID" ]; then
+    break
+fi
+
+sudo -u "$CURRENT_USER" osascript <<EOF
+display alert "Asset ID cannot be empty."
+EOF
+
+done
+
+#
+# Ask for Location
+#
+
+LOCATION=$(sudo -u "$CURRENT_USER" osascript <<EOF
+try
+choose from list {"Udupi","Mangalore","Chennai","Kochi"} \
+with title "Endpoint Agent Registration" \
+with prompt "Select Office Location"
+on error
+return false
+end try
+EOF
+)
+
+if [ "$LOCATION" = "false" ]; then
+    echo "Installation cancelled."
+    exit 1
+fi
+
+LOCATION=$(echo "$LOCATION" | tr -d '{}')
+
+#
+# Generate config.json
+#
+
+cat > "$APP_DIR/config.json" <<EOF
+{
+  "assetId": "$ASSET_ID",
+  "location": "$LOCATION",
+  "serverUrl": "https://antivirus-details-sender.onrender.com",
+  "apiKey": "LCODEISTHEBEST"
+}
+EOF
+
+chmod 600 "$APP_DIR/config.json"
+
+#
+# Permissions
+#
+
+chmod +x "$APP_DIR/EndpointAgentService"
+chmod +x "$APP_DIR/EndpointTray"
+chmod +x "$APP_DIR/node/bin/node"
+
+#
+# Ownership
+#
+
+chown -R root:wheel "$APP_DIR"
+
+#
+# Runtime files
+#
+
+touch "$APP_DIR/heartbeat.txt"
+
+touch /Library/Logs/EndpointAgent.log
+touch /Library/Logs/EndpointAgent.err
+
+chmod 644 /Library/Logs/EndpointAgent.log
+chmod 644 /Library/Logs/EndpointAgent.err
+
+#
+# Remove old socket
+#
+
+rm -f "$APP_DIR/run/endpointagent.sock"
+
+#
+# Start LaunchDaemon
+#
+
+launchctl bootout system /Library/LaunchDaemons/com.endpoint.agent.plist 2>/dev/null || true
+
+launchctl bootstrap system /Library/LaunchDaemons/com.endpoint.agent.plist 2>/dev/null || true
+
+launchctl enable system/com.endpoint.agent 2>/dev/null || true
+
+launchctl kickstart -k system/com.endpoint.agent 2>/dev/null || true
+
+#
+# Start LaunchAgent
+#
+
+launchctl bootout gui/$CURRENT_UID /Library/LaunchAgents/com.endpoint.tray.plist 2>/dev/null || true
+
+launchctl bootstrap gui/$CURRENT_UID /Library/LaunchAgents/com.endpoint.tray.plist 2>/dev/null || true
+
+launchctl enable gui/$CURRENT_UID/com.endpoint.tray 2>/dev/null || true
+
+launchctl kickstart -k gui/$CURRENT_UID/com.endpoint.tray 2>/dev/null || true
+
+echo "Endpoint Agent installed successfully."
+
+exit 0

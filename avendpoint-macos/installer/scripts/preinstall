@@ -1,0 +1,24 @@
+#!/bin/bash
+
+set -e
+
+echo "Stopping previous Endpoint Agent installation..."
+
+# Stop LaunchDaemon
+launchctl bootout system /Library/LaunchDaemons/com.endpoint.agent.plist 2>/dev/null || true
+
+# Stop LaunchAgent for every logged in user
+for uid in $(ps -axo uid= | sort -u); do
+    launchctl bootout gui/$uid /Library/LaunchAgents/com.endpoint.tray.plist 2>/dev/null || true
+done
+
+# Kill any remaining processes
+pkill -f EndpointAgentService || true
+pkill -f EndpointTray || true
+pkill -f "node.*EndpointAgent" || true
+
+echo "Removing previous installation..."
+
+rm -rf "/Library/Application Support/EndpointAgent"
+
+exit 0
