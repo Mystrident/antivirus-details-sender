@@ -114,17 +114,20 @@ export function getMacAddress(): string | null {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
+
+
 export async function getEndpointMetadata(): Promise<EndpointMetadata> {
   const macAddress = getMacAddress();
 
   if (!macAddress) {
-    throw new Error('Unable to determine MAC address');
+    throw new Error("Unable to determine MAC address");
   }
 
   return {
-    hostname:   os.hostname(),
+    hostname: os.hostname(),
     osName:     getMacOSName(),
-    macAddress: getMacAddress(),
-    username:   os.userInfo().username,
+    macAddress,
+    username: os.userInfo().username,
   };
 }
+

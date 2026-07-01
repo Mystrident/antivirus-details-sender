@@ -144,7 +144,7 @@ unlink(Constants.socketPath)
 
         logger.info("IPC Action: \(request.action)")
 
-        let response: IPCResponse = process(request)
+        let response: IPCResponse =process(request, clientFD: client)
 
         let data: Data = try JSONEncoder().encode(response)
 
@@ -184,7 +184,18 @@ unlink(Constants.socketPath)
     }
 }
 
-private func process(_ request: IPCRequest) -> IPCResponse {
+private func isPrivilegedCaller(_ clientFD: Int32) -> Bool {
+    var uid: uid_t = 0
+    var gid: gid_t = 0
+
+    guard getpeereid(clientFD, &uid, &gid) == 0 else {
+        return false
+    }
+
+    return uid == 0 // root; service itself runs as root per the LaunchDaemon plist
+}
+
+private func process(_ request: IPCRequest, clientFD: Int32) -> IPCResponse {
 
     switch request.action {
 
@@ -206,6 +217,10 @@ private func process(_ request: IPCRequest) -> IPCResponse {
 
     case .restart:
 
+        guard isPrivilegedCaller(clientFD) else {
+            return IPCResponse(success: false, message: "Access denied", state: nil)
+        }
+
         manager.restartNode()
 
         return IPCResponse(
@@ -215,6 +230,10 @@ private func process(_ request: IPCRequest) -> IPCResponse {
         )
 
     case .shutdown:
+
+        guard isPrivilegedCaller(clientFD) else {
+            return IPCResponse(success: false, message: "Access denied", state: nil)
+        }
 
         manager.stopNode()
 
