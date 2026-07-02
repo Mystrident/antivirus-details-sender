@@ -32,11 +32,21 @@ startHeartbeat();
 async function bootstrap() {
   logger.info("Agent startup initiated");
 
-  try {
-    await sendHeartbeat();
-    logger.info("Initial telemetry uploaded");
-  } catch (error) {
-    logger.error({ err: error }, "Initial heartbeat failed");
+  while (true) {
+    try {
+      await sendHeartbeat();
+
+      logger.info("Initial telemetry uploaded");
+
+      break;
+    } catch (error) {
+      logger.error(
+        { err: error },
+        "Initial telemetry upload failed. Retrying in 1 minute...",
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 60_000));
+    }
   }
 
   startScheduler();
