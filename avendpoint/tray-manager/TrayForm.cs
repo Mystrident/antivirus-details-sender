@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Text.Json;
 using System.Timers;
 using System.Windows.Forms;
 
@@ -35,25 +36,27 @@ namespace EndpointTrayManager
         {
             _contextMenu = new ContextMenuStrip();
 
-            var statusLabel = new ToolStripMenuItem("Status: Unknown");
-            statusLabel.Enabled = false;
-            statusLabel.Name = "StatusLabel";
-            _contextMenu.Items.Add(statusLabel);
+            var statusLabel = new ToolStripMenuItem("Status: Unknown")
+            {
+                Enabled = false,
+                Name = "StatusLabel",
+            };
 
+            var pidLabel = new ToolStripMenuItem("PID: -") { Enabled = false, Name = "PidLabel" };
+
+            _contextMenu.Items.Add(statusLabel);
+            _contextMenu.Items.Add(pidLabel);
             _contextMenu.Items.Add(new ToolStripSeparator());
 
-            var restartItem = new ToolStripMenuItem("Restart Agent");
+            var restartItem = new ToolStripMenuItem("Restart");
             restartItem.Name = "RestartItem";
             restartItem.Click += (s, e) => RestartAgent();
-
             _contextMenu.Items.Add(restartItem);
 
-            _contextMenu.Items.Add(new ToolStripSeparator());
-
-            var exitItem = new ToolStripMenuItem("Exit Manager");
-            exitItem.Click += (s, e) => ExitManager();
-
-            _contextMenu.Items.Add(exitItem);
+            var stopItem = new ToolStripMenuItem("Stop");
+            stopItem.Name = "StopItem";
+            stopItem.Click += (s, e) => StopAgent();
+            _contextMenu.Items.Add(stopItem);
         }
 
         private void InitializeTrayIcon()
@@ -62,8 +65,6 @@ namespace EndpointTrayManager
             _redIcon = CreateColoredIcon(Color.Red);
 
             _trayIcon = new NotifyIcon { ContextMenuStrip = _contextMenu, Visible = true };
-
-            _trayIcon.DoubleClick += (s, e) => ToggleVisibility();
 
             UpdateTrayIcon();
         }
@@ -89,20 +90,28 @@ namespace EndpointTrayManager
                         {
                             string statusJson = _pipeClient.SendCommand("GET_STATUS");
 
-                            _isRunning = statusJson.Contains("\"status\":\"RUNNING\"");
+                            using JsonDocument doc = JsonDocument.Parse(statusJson);
+
+                            _isRunning =
+                                doc.RootElement.GetProperty("status").GetString() == "RUNNING";
+
+                            int pid = doc.RootElement.GetProperty("processId").GetInt32();
 
                             foreach (ToolStripItem item in _contextMenu.Items)
                             {
-                                if (item.Name == "StatusLabel")
+                                switch (item.Name)
                                 {
-                                    item.Text = _isRunning ? "Status: Running" : "Status: Stopped";
-                                }
-                                else if (item.Name == "RestartItem")
-                                {
-                                    item.Enabled = _isRunning;
+                                    case "StatusLabel":
+                                        item.Text = _isRunning
+                                            ? "Status: Running"
+                                            : "Status: Stopped";
+                                        break;
+
+                                    case "PidLabel":
+                                        item.Text = _isRunning ? $"PID: {pid}" : "PID: -";
+                                        break;
                                 }
                             }
-
                             UpdateTrayIcon();
                         }
                         catch
@@ -177,8 +186,7 @@ namespace EndpointTrayManager
             }
         }
 
-        
-       [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool DestroyIcon(IntPtr handle);
 
         private Icon CreateColoredIcon(Color color)
@@ -267,34 +275,6 @@ namespace EndpointTrayManager
                     MessageBoxIcon.Error
                 );
             }
-        }
-
-        private void ToggleVisibility()
-        {
-            if (this.Visible)
-            {
-                this.Hide();
-                this.WindowState = FormWindowState.Minimized;
-            }
-            else
-            {
-                this.Show();
-                this.WindowState = FormWindowState.Normal;
-            }
-        }
-
-        private void ExitManager()
-        {
-            _statusCheckTimer?.Stop();
-            _statusCheckTimer?.Dispose();
-
-            _trayIcon.Visible = false;
-            _trayIcon.Dispose();
-
-            _greenIcon?.Dispose();
-            _redIcon?.Dispose();
-
-            Application.Exit();
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
