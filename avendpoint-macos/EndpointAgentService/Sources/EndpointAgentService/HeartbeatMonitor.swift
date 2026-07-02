@@ -66,29 +66,31 @@ final class HeartbeatMonitor {
         // it enters the 'else' block immediately.
         guard manager.isRunning() else {
 
-            // Logs a warning message that the process has crashed or stopped.
-            logger.warning("Node process not running. Restarting...")
-
-            // Tells the process manager to start the node back up.
-            manager.startNode()
-
-            // Exits the function early so no further checks are done.
+        if manager.wasStoppedManually() {
             return
         }
+
+        logger.warning("Node process not running. Restarting...")
+
+        manager.startNode()
+
+        return
+    }
 
         // 'guard let' tries to safely unwrap the optional value returned by heartbeatAgeSeconds().
         // If it returns 'nil' (file missing), the 'else' block runs.
         guard let heartbeatAge = heartbeatAgeSeconds() else {
 
-            // Logs a warning that the heartbeat file couldn't be found.
-            logger.warning("Heartbeat file missing")
-
-            // Restarts the node, assuming something went wrong.
-            manager.restartNode()
-
-            // Exits the function early.
+            if manager.wasStoppedManually() {
             return
         }
+
+        logger.warning("Heartbeat file missing")
+
+        manager.restartNode()
+
+        return
+    }
 
         // Logs a debug message showing how old the heartbeat file currently is.
         // 'Int(heartbeatAge)' converts a decimal time (Double) into a whole number.
@@ -97,15 +99,17 @@ final class HeartbeatMonitor {
         // Checks if the heartbeat age has exceeded our allowed threshold.
         if heartbeatAge > Constants.heartbeatTimeout {
 
-            // Logs a warning that the node is frozen or unresponsive.
-            logger.warning(
-                "Heartbeat stale (\(Int(heartbeatAge))s). Restarting Node."
-            )
-
-            // Restarts the unresponsive node.
-            manager.restartNode()
+        if manager.wasStoppedManually() {
+            return
         }
+
+        logger.warning(
+            "Heartbeat stale (\(Int(heartbeatAge))s). Restarting Node."
+        )
+
+        manager.restartNode()
     }
+}
 
     
 

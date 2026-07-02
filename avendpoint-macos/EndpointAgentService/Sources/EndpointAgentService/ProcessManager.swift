@@ -8,6 +8,8 @@ final class ProcessManager {
 
     private var status: AgentStatus = .stopped
 
+    private var manuallyStopped: Bool = false 
+
     private let logger = Logger.shared
 
     // MARK: - Environment
@@ -109,6 +111,8 @@ final class ProcessManager {
 
         func startNode() {
 
+            manuallyStopped = false
+
         if isRunning() {
 
             logger.debug("Node process already running")
@@ -180,6 +184,8 @@ final class ProcessManager {
     }
 
     func stopNode() {
+
+        manuallyStopped = true
 
         guard let process else {
 
@@ -271,6 +277,10 @@ final class ProcessManager {
 
         }
 
+    }
+
+    func wasStoppedManually() -> Bool {
+        manuallyStopped
     }
 
     func currentState() -> AgentState {
