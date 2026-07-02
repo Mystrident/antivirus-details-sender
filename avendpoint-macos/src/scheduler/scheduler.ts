@@ -6,23 +6,19 @@ import { logger } from '../logger.js';
 import { SCHEDULES } from '../config/constants.js';
 
 async function sendHeartbeat() {
-  try {
-    const payload = await collectTelemetry();
+  const payload = await collectTelemetry();
 
-    logger.debug(
-      {
-        assetId:  payload.assetId,
-        location: payload.location,
-      },
-      'Telemetry collected',
-    );
+  logger.debug(
+    {
+      assetId: payload.assetId,
+      location: payload.location,
+    },
+    "Telemetry collected",
+  );
 
-    await sendTelemetry(payload);
+  await sendTelemetry(payload);
 
-    logger.info("Telemetry uploaded successfully");
-  } catch (error) {
-    logger.error({ err: error }, 'Heartbeat failed');
-  }
+  logger.info("Telemetry uploaded successfully");
 }
 
 export function startScheduler() {
