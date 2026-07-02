@@ -147,6 +147,11 @@ namespace EndpointAgentService
 
                 if (!_processManager.IsHealthy())
                 {
+                    if (_processManager.WasStoppedManually())
+                    {
+                        return;
+                    }
+
                     _eventLog.WriteEntry(
                         $"Heartbeat age check. Healthy={_processManager.IsHealthy()}",
                         EventLogEntryType.Information

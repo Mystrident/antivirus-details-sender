@@ -12,6 +12,7 @@ namespace EndpointAgentService
         private EventLog _eventLog;
         private Process _nodeProcess;
         private object _lockObj = new object();
+        private bool _manuallyStopped = false;
 
         private static string? GetCommandLine(Process process)
         {
@@ -114,6 +115,11 @@ namespace EndpointAgentService
             }
         }
 
+        public bool WasStoppedManually()
+        {
+            return _manuallyStopped;
+        }
+
         public ProcessManager(string nodeExePath, string nodeAppPath, EventLog eventLog)
         {
             _nodeExePath = nodeExePath;
@@ -124,6 +130,7 @@ namespace EndpointAgentService
 
         public void Start()
         {
+            _manuallyStopped = false;
             lock (_lockObj)
             {
                 if (IsRunning)
@@ -192,6 +199,8 @@ namespace EndpointAgentService
 
         public void Stop()
         {
+            _manuallyStopped = true;
+
             lock (_lockObj)
             {
                 if (!IsRunning)
