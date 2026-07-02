@@ -43,7 +43,7 @@ export async function getWindowsAntivirusInfo(): Promise<AntivirusInfo> {
       return collectMcAfee(antivirus);
     }
 
-    if (isNortonInstalled()) {
+    if (await isNortonInstalled()) {
       const antivirus: AntivirusProduct = {
         displayName: "Norton",
         productState: PRODUCT_STATE.ENABLED,
