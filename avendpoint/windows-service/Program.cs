@@ -54,7 +54,54 @@ namespace EndpointAgentService
         private static void UninstallService()
         {
             RunSc("stop EndpointAgent");
+
+            // "sc stop" only *requests* a stop and returns almost immediately —
+            // it does not wait for the service to actually reach STOPPED. Our
+            // OnStop() handler kills the Node child process (with up to a ~15s
+            // graceful-then-force-kill sequence), so without this wait, "sc
+            // delete" below — and Inno's subsequent file cleanup — can run
+            // while node.exe is still being torn down in the background,
+            // leading to leftover processes or "file in use" errors.
+            WaitForStopped("EndpointAgent", TimeSpan.FromSeconds(30));
+
             RunSc("delete EndpointAgent");
+        }
+
+        /// <summary>
+        /// Blocks until the given service reports Stopped, or the timeout
+        /// elapses. Returns immediately (treated as "done") if the service
+        /// no longer exists at all, since that's the end state we want.
+        /// </summary>
+        private static void WaitForStopped(string serviceName, TimeSpan timeout)
+        {
+            var sw = Stopwatch.StartNew();
+
+            while (sw.Elapsed < timeout)
+            {
+                try
+                {
+                    using var sc = new ServiceController(serviceName);
+                    sc.Refresh();
+
+                    if (sc.Status == ServiceControllerStatus.Stopped)
+                    {
+                        return;
+                    }
+                }
+                catch (InvalidOperationException)
+                {
+                    // Service isn't registered (already deleted, or the
+                    // "create" call earlier never succeeded) — nothing to
+                    // wait for.
+                    return;
+                }
+
+                System.Threading.Thread.Sleep(500);
+            }
+
+            Console.WriteLine(
+                $"Warning: {serviceName} did not report Stopped within {timeout.TotalSeconds}s; proceeding anyway."
+            );
         }
 
         private static void RunSc(string arguments)
